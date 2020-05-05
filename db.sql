@@ -12,13 +12,13 @@ DROP FUNCTION IF EXISTS updater;
 CREATE TABLE users
 (
     u_id     BIGSERIAL PRIMARY KEY,
-    nickname CITEXT COLLATE "C" NOT NULL UNIQUE,
+    nickname CITEXT COLLATE "C" UNIQUE,
     fullname VARCHAR(100)       NOT NULL,
     email    CITEXT             NOT NULL UNIQUE,
     about    TEXT
 );
 
-CREATE UNIQUE INDEX idx_users_nickname ON users (nickname, email);
+CREATE INDEX idx_users_nickname ON users USING hash (nickname);
 
 CREATE TABLE forums
 (
@@ -29,7 +29,6 @@ CREATE TABLE forums
 );
 
 CREATE INDEX idx_forums_slug ON forums(slug);
-
 
 CREATE TABLE threads
 (
@@ -44,7 +43,7 @@ CREATE TABLE threads
 );
 
 CREATE INDEX idx_threads_tidhash ON threads USING hash (t_id);
-CREATE INDEX idx_threads_slughash ON threads USING hash (slug);
+-- CREATE INDEX idx_threads_slughash ON threads USING hash (slug);
 
 
 CREATE TABLE voteThreads
@@ -68,8 +67,8 @@ CREATE TABLE messages
     f_slug     CITEXT COLLATE "C" NOT NULL REFERENCES forums (slug) ON DELETE CASCADE,
     t_id       BIGINT             NOT NULL REFERENCES threads ON DELETE CASCADE
 );
-
 CREATE INDEX idx_messages_mid ON messages (t_id,m_id);
+-- CREATE INDEX idx_messages_mid ON messages (t_id,m_id);
 
 CREATE OR REPLACE FUNCTION updater()
     RETURNS TRIGGER AS

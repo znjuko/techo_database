@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	_ "github.com/lib/pq"
 	"main/internal/models"
 	"strconv"
@@ -24,6 +25,7 @@ func (UserData UserRepoRealisation) CreateNewUser(userModel models.UserModel) ([
 	_, err = UserData.dbLauncher.Exec("INSERT INTO users (nickname , fullname , email , about) VALUES($1 , $2 , $3 ,$4)", userModel.Nickname, userModel.Fullname, userModel.Email, userModel.About)
 
 	if err != nil {
+		fmt.Println(err)
 		row , err := UserData.dbLauncher.Query("SELECT nickname , fullname , email , about FROM users WHERE nickname = $1 OR email = $2", userModel.Nickname, userModel.Email)
 
 		if row != nil {

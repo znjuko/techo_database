@@ -34,7 +34,6 @@ func (Thread ThreadDelivery) CreatePosts(rwContext echo.Context) error {
 	if err != nil {
 		if err.Error() == "no user" {
 			return rwContext.JSON(http.StatusNotFound, models.Error{Message:"Can't find post author by nickname: " + posts[0].Author})
-
 		}
 
 		if err.Error() == "No parent message!"{

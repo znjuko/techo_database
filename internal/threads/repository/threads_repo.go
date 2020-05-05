@@ -41,23 +41,22 @@ func (Thread ThreadRepoRealisation) CreatePost(slug string, id int, posts []mode
 	for _, value := range posts {
 
 		if value.Parent == 0 {
-			authorId := 0
 			value.Thread = threadId
 			value.Forum = forumSlug
 
-			row = Thread.dbLauncher.QueryRow("SELECT u_id , nickname FROM users WHERE nickname = $1", value.Author)
-			err = row.Scan(&authorId, &value.Author)
-
-			if err != nil {
-				return []models.Message{value}, errors.New("no user")
-			}
 			value.IsEdited = false
 			row = Thread.dbLauncher.QueryRow("INSERT INTO messages (date , message , parent , path , u_nickname , f_slug , t_id) VALUES ($1 , $2 , $3 , ARRAY[]::BIGINT[] , $4 , $5 , $6) RETURNING date , m_id", t, value.Message, value.Parent, value.Author, forumSlug, threadId)
 			err = row.Scan(&value.Created, &value.Id)
+
+			if err != nil {
+				fmt.Println("[DEBUG] error at method CreatePost (getting parent) :", err)
+				return posts, errors.New("no user")
+			}
+
 			currentPosts = append(currentPosts, value)
 		} else {
 			parentPath := make([]uint8, 0)
-			row = Thread.dbLauncher.QueryRow("SELECT m_id , path FROM messages WHERE m_id = $1 AND t_id = $2", value.Parent, threadId)
+			row = Thread.dbLauncher.QueryRow("SELECT m_id , path FROM messages WHERE t_id = $2 AND m_id = $1 ", value.Parent, threadId)
 			err = row.Scan(&value.Parent, &parentPath)
 
 			if err != nil {
@@ -65,21 +64,15 @@ func (Thread ThreadRepoRealisation) CreatePost(slug string, id int, posts []mode
 				return nil, errors.New("Parent post was created in another thread")
 			}
 
-			authorId := 0
 			value.Thread = threadId
 			value.Forum = forumSlug
 			value.IsEdited = false
 
-			row = Thread.dbLauncher.QueryRow("SELECT u_id , nickname FROM users WHERE nickname = $1", value.Author)
-			err = row.Scan(&authorId, &value.Author)
-
-			if err != nil {
-				return []models.Message{value}, errors.New("no user")
-			}
 			dRow, err := Thread.dbLauncher.Query("INSERT INTO messages (date , message , parent , path , u_nickname , f_slug , t_id) VALUES ($1 , $2 , $3 , $7::BIGINT[] , $4 , $5 , $6) RETURNING date , m_id", t, value.Message, value.Parent, value.Author, forumSlug, threadId, parentPath)
 
 			if err != nil {
 				fmt.Println("[DEBUG] error at method CreatePost (creating post with a parent) :", err)
+				return posts, errors.New("no user")
 			}
 
 			if dRow != nil {
@@ -90,8 +83,6 @@ func (Thread ThreadRepoRealisation) CreatePost(slug string, id int, posts []mode
 
 			currentPosts = append(currentPosts, value)
 		}
-
-		Thread.dbLauncher.Exec("INSERT INTO forumUsers (f_slug , u_nickname) VALUES($1,$2)", forumSlug, value.Author)
 
 	}
 

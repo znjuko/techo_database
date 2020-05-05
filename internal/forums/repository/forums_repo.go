@@ -162,8 +162,12 @@ func (Forum ForumRepoRealisation) GetThreads(forum models.Forum, limit int, sinc
 
 		for rowThreads.Next() {
 			thread := new(models.Thread)
+			var threadSlug *string
+			err = rowThreads.Scan(&thread.Id, &thread.Created, &thread.Message, &thread.Title, &thread.Votes, &threadSlug, &thread.Forum, &thread.Author)
 
-			err = rowThreads.Scan(&thread.Id, &thread.Created, &thread.Message, &thread.Title, &thread.Votes, &thread.Slug, &thread.Forum, &thread.Author)
+			if threadSlug != nil {
+				thread.Slug = *threadSlug
+			}
 
 			if err != nil {
 				fmt.Println("[DEBUG] error at method GetThreads (scanning slug of a forum) :", err)

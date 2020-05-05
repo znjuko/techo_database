@@ -57,7 +57,12 @@ func (PostRepo PostRepoRealisation) GetPost(id int, flags []string) (models.AllP
 		case "thread":
 			thread := new(models.Thread)
 			row = PostRepo.dbLauncher.QueryRow("SELECT t_id , date , message , title , votes , slug , u_nickname , f_slug FROM threads WHERE t_id = $1", msg.Thread)
-			err = row.Scan(&thread.Id, &thread.Created, &thread.Message, &thread.Title, &thread.Votes, &thread.Slug, &thread.Author, &thread.Forum)
+			var threadSlug *string
+			err = row.Scan(&thread.Id, &thread.Created, &thread.Message, &thread.Title, &thread.Votes, &threadSlug, &thread.Author, &thread.Forum)
+
+			if threadSlug != nil {
+				thread.Slug = *threadSlug
+			}
 
 			if err != nil {
 				fmt.Println(err, "can't find a thread")

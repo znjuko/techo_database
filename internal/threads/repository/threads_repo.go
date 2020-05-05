@@ -111,9 +111,15 @@ func (Thread ThreadRepoRealisation) VoteThread(nickname string, voice, threadId 
 		row = Thread.dbLauncher.QueryRow("SELECT t_id , slug , u_nickname , f_slug , date , message , title , votes FROM threads WHERE t_id = $1", threadId)
 	}
 
-	err = row.Scan(&thread.Id, &thread.Slug, &thread.Author, &thread.Forum, &thread.Created, &thread.Message, &thread.Title, &thread.Votes)
+	var forumSlug *string
+	err = row.Scan(&thread.Id, &forumSlug, &thread.Author, &thread.Forum, &thread.Created, &thread.Message, &thread.Title, &thread.Votes)
+
+	if forumSlug != nil {
+		thread.Slug = *forumSlug
+	}
 
 	if err != nil {
+		fmt.Println(err)
 		return thread, err
 	}
 
@@ -184,7 +190,12 @@ func (Thread ThreadRepoRealisation) GetThread(threadId int, thread models.Thread
 		row = Thread.dbLauncher.QueryRow("SELECT t_id , slug , u_nickname , f_slug , date , message , title , votes FROM threads WHERE t_id = $1", threadId)
 	}
 
-	err := row.Scan(&thread.Id, &thread.Slug, &thread.Author, &thread.Forum, &thread.Created, &thread.Message, &thread.Title, &thread.Votes)
+	var threadSlug *string
+	err := row.Scan(&thread.Id, &threadSlug, &thread.Author, &thread.Forum, &thread.Created, &thread.Message, &thread.Title, &thread.Votes)
+
+	if threadSlug != nil {
+		thread.Slug = *threadSlug
+	}
 
 	if err != nil {
 		return thread, err
@@ -310,9 +321,12 @@ func (Thread ThreadRepoRealisation) GetPostsSorted(slug string, threadId int, li
 	}
 
 	if len(messages) == 0 {
-		trow := Thread.dbLauncher.QueryRow("SELECT slug FROM threads WHERE t_id = $1", selectValues[0])
+		trow := Thread.dbLauncher.QueryRow("SELECT t_id , slug FROM threads WHERE t_id = $1", selectValues[0])
 
-		if err = trow.Scan(&slug); err != nil {
+		var threadId *int64
+		var threadSlug *string
+
+		if err = trow.Scan(&threadId , &threadSlug); err != nil {
 			fmt.Println(err)
 			return nil, err
 		}

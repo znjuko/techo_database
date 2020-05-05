@@ -10,12 +10,12 @@ import (
 	"strconv"
 )
 
-type ForumDelivery struct{
+type ForumDelivery struct {
 	forumLogic forums.ForumUse
 }
 
 func NewForumDeliveryRealisation(fLogic usecase.ForumUseRealisation) ForumDelivery {
-	return ForumDelivery{forumLogic:fLogic}
+	return ForumDelivery{forumLogic: fLogic}
 }
 
 func (ForumD ForumDelivery) CreateForum(rwContext echo.Context) error {
@@ -23,10 +23,10 @@ func (ForumD ForumDelivery) CreateForum(rwContext echo.Context) error {
 
 	rwContext.Bind(newForumData)
 
-	answer , err := ForumD.forumLogic.CreateForum(*newForumData)
+	answer, err := ForumD.forumLogic.CreateForum(*newForumData)
 
 	if err == sql.ErrNoRows {
-		return rwContext.JSON(http.StatusNotFound, &models.Error{Message:"Can't find user by nickname: " +newForumData.User})
+		return rwContext.JSON(http.StatusNotFound, &models.Error{Message: "Can't find user by nickname: " + newForumData.User})
 	}
 
 	if err != nil {
@@ -39,26 +39,26 @@ func (ForumD ForumDelivery) CreateForum(rwContext echo.Context) error {
 
 func (ForumD ForumDelivery) GetForumUsers(rwContext echo.Context) error {
 	slug := rwContext.Param("slug")
-	limit , _ := strconv.Atoi(rwContext.QueryParam("limit"))
+	limit, _ := strconv.Atoi(rwContext.QueryParam("limit"))
 	since := rwContext.QueryParam("since")
-	desc , _:= strconv.ParseBool(rwContext.QueryParam("desc"))
+	desc, _ := strconv.ParseBool(rwContext.QueryParam("desc"))
 
-	data , err := ForumD.forumLogic.GetForumUsers(slug,limit,since,desc)
+	data, err := ForumD.forumLogic.GetForumUsers(slug, limit, since, desc)
 
 	if err != nil {
-		return rwContext.JSON(http.StatusNotFound, &models.Error{Message:"can't find forum by slug: "+slug})
+		return rwContext.JSON(http.StatusNotFound, &models.Error{Message: "can't find forum by slug: " + slug})
 	}
 
-	return rwContext.JSON(http.StatusOK,data)
+	return rwContext.JSON(http.StatusOK, data)
 }
 
 func (ForumD ForumDelivery) GetForum(rwContext echo.Context) error {
 	slug := rwContext.Param("slug")
 
-	answer , err := ForumD.forumLogic.GetForumData(slug)
+	answer, err := ForumD.forumLogic.GetForumData(slug)
 
-	if err == sql.ErrNoRows{
-		return rwContext.JSON(http.StatusNotFound, &models.Error{Message:"Can't find forum by slug: " +slug})
+	if err == sql.ErrNoRows {
+		return rwContext.JSON(http.StatusNotFound, &models.Error{Message: "Can't find forum by slug: " + slug})
 	}
 
 	return rwContext.JSON(http.StatusOK, answer)
@@ -67,39 +67,39 @@ func (ForumD ForumDelivery) GetForum(rwContext echo.Context) error {
 func (ForumD ForumDelivery) CreateThread(rwContext echo.Context) error {
 	slug := rwContext.Param("slug")
 
-	threadReq  := new(models.Thread)
+	threadReq := new(models.Thread)
 
 	rwContext.Bind(threadReq)
 
-	thread , err := ForumD.forumLogic.CreateThread(slug, *threadReq)
+	thread, err := ForumD.forumLogic.CreateThread(slug, *threadReq)
 
 	if err == sql.ErrNoRows {
-		return rwContext.JSON(http.StatusNotFound, &models.Error{Message:"Can't create thread by slug: " + slug })
+		return rwContext.JSON(http.StatusNotFound, &models.Error{Message: "Can't create thread by slug: " + slug})
 	}
 
 	if err != nil {
 		return rwContext.JSON(http.StatusConflict, thread)
 	}
 
-	return rwContext.JSON(http.StatusCreated,thread)
+	return rwContext.JSON(http.StatusCreated, thread)
 }
 
 func (ForumD ForumDelivery) GetSortedThreads(rwContext echo.Context) error {
 	slug := rwContext.Param("slug")
-	limit , _:= strconv.Atoi(rwContext.QueryParam("limit"))
+	limit, _ := strconv.Atoi(rwContext.QueryParam("limit"))
 	since := rwContext.QueryParam("since")
-	desc , _:= strconv.ParseBool(rwContext.QueryParam("desc"))
+	desc, _ := strconv.ParseBool(rwContext.QueryParam("desc"))
 
-	threads , err := ForumD.forumLogic.GetThreads(slug,limit,since,desc)
+	threads, err := ForumD.forumLogic.GetThreads(slug, limit, since, desc)
 
 	if err != nil {
-		return rwContext.JSON(http.StatusNotFound, &models.Error{Message:"Can't create thread by slug: " + slug })
+		return rwContext.JSON(http.StatusNotFound, &models.Error{Message: "Can't create thread by slug: " + slug})
 	}
 
-	return rwContext.JSON(http.StatusOK,threads)
+	return rwContext.JSON(http.StatusOK, threads)
 }
 
-func (ForumD ForumDelivery) SetupHandlers(server *echo.Echo){
+func (ForumD ForumDelivery) SetupHandlers(server *echo.Echo) {
 	server.POST("/api/forum/create", ForumD.CreateForum)
 	server.GET("/api/forum/:slug/details", ForumD.GetForum)
 	server.POST("/api/forum/:slug/create", ForumD.CreateThread)

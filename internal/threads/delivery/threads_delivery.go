@@ -33,18 +33,17 @@ func (Thread ThreadDelivery) CreatePosts(rwContext echo.Context) error {
 
 	if err != nil {
 		if err.Error() == "no user" {
-			return rwContext.JSON(http.StatusNotFound, models.Error{Message:"Can't find post author by nickname: " + posts[0].Author})
+			return rwContext.JSON(http.StatusNotFound, models.Error{Message: "Can't find post author by nickname: " + posts[0].Author})
 		}
 
-		if err.Error() == "No parent message!"{
-			return rwContext.JSON(http.StatusConflict, models.Error{Message:err.Error()})
+		if err.Error() == "No parent message!" {
+			return rwContext.JSON(http.StatusConflict, models.Error{Message: err.Error()})
 		}
 
-		if err.Error() == "Parent post was created in another thread"{
-			return rwContext.JSON(http.StatusConflict, models.Error{Message:err.Error()})
+		if err.Error() == "Parent post was created in another thread" {
+			return rwContext.JSON(http.StatusConflict, models.Error{Message: err.Error()})
 		}
 	}
-
 
 	if err != nil {
 		return rwContext.JSON(http.StatusConflict, models.Error{Message: "no parent message"})
@@ -60,33 +59,33 @@ func (Thread ThreadDelivery) VoteThread(rwContext echo.Context) error {
 	voice := new(models.Voice)
 	rwContext.Bind(&voice)
 
-	thread , err := Thread.threadLogic.VoteThread(slugOrId,voice.Nickname,voice.Voice)
+	thread, err := Thread.threadLogic.VoteThread(slugOrId, voice.Nickname, voice.Voice)
 
 	if err != nil {
-		return rwContext.JSON(http.StatusNotFound, models.Error{Message:"can't vote by slug_or_id:" + slugOrId})
+		return rwContext.JSON(http.StatusNotFound, models.Error{Message: "can't vote by slug_or_id:" + slugOrId})
 	}
 
-	return rwContext.JSON(http.StatusOK,thread)
+	return rwContext.JSON(http.StatusOK, thread)
 }
 
 func (Thread ThreadDelivery) GetThread(rwContext echo.Context) error {
 	slugOrId := rwContext.Param("slug_or_id")
 
-	thread , err := Thread.threadLogic.GetThread(slugOrId)
+	thread, err := Thread.threadLogic.GetThread(slugOrId)
 
 	if err != nil {
-		return rwContext.JSON(http.StatusNotFound, models.Error{Message:"can't get thread by slug_or_id:" + slugOrId})
+		return rwContext.JSON(http.StatusNotFound, models.Error{Message: "can't get thread by slug_or_id:" + slugOrId})
 	}
 
-	return rwContext.JSON(http.StatusOK,thread)
+	return rwContext.JSON(http.StatusOK, thread)
 }
 
 func (Thread ThreadDelivery) GetPosts(rwContext echo.Context) error {
 	slugOrId := rwContext.Param("slug_or_id")
-	limit , _ := strconv.Atoi(rwContext.QueryParam("limit"))
-	since , _:= strconv.Atoi(rwContext.QueryParam("since"))
+	limit, _ := strconv.Atoi(rwContext.QueryParam("limit"))
+	since, _ := strconv.Atoi(rwContext.QueryParam("since"))
 	sortType := rwContext.QueryParam("sort")
-	desc , err := strconv.ParseBool(rwContext.QueryParam("desc"))
+	desc, err := strconv.ParseBool(rwContext.QueryParam("desc"))
 
 	if err != nil {
 		desc = false
@@ -96,13 +95,13 @@ func (Thread ThreadDelivery) GetPosts(rwContext echo.Context) error {
 		sortType = "flat"
 	}
 
-	posts , err := Thread.threadLogic.GetPosts(slugOrId,limit,since,sortType,desc)
+	posts, err := Thread.threadLogic.GetPosts(slugOrId, limit, since, sortType, desc)
 
 	if err != nil {
-		return rwContext.JSON(http.StatusNotFound, models.Error{Message:"can't get thread by slug_or_id:" + slugOrId})
+		return rwContext.JSON(http.StatusNotFound, models.Error{Message: "can't get thread by slug_or_id:" + slugOrId})
 	}
 
-	return rwContext.JSON(http.StatusOK,posts)
+	return rwContext.JSON(http.StatusOK, posts)
 }
 
 func (Thread ThreadDelivery) UpdateThread(rwContext echo.Context) error {
@@ -110,13 +109,13 @@ func (Thread ThreadDelivery) UpdateThread(rwContext echo.Context) error {
 	newThread := new(models.Thread)
 	rwContext.Bind(newThread)
 
-	thread , err := Thread.threadLogic.UpdateThread(slugOrId,*newThread)
+	thread, err := Thread.threadLogic.UpdateThread(slugOrId, *newThread)
 
 	if err != nil {
-		return rwContext.JSON(http.StatusNotFound, models.Error{"Can't find thread by slug_or_id: "+ slugOrId})
+		return rwContext.JSON(http.StatusNotFound, models.Error{"Can't find thread by slug_or_id: " + slugOrId})
 	}
 
-	return rwContext.JSON(http.StatusOK,thread)
+	return rwContext.JSON(http.StatusOK, thread)
 }
 
 func (ForumD ThreadDelivery) SetupHandlers(server *echo.Echo) {

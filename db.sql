@@ -18,13 +18,14 @@ CREATE TABLE users
     about    TEXT
 );
 
-CREATE INDEX idx_users_nickname ON users USING hash (nickname);
+CREATE INDEX idx_users_nickname ON users(nickname);
 
 CREATE TABLE forums
 (
     f_id       BIGSERIAL PRIMARY KEY,
     slug       CITEXT UNIQUE NOT NULL,
     title      TEXT,
+    message_counter BIGINT DEFAULT 0,
     u_nickname CITEXT COLLATE "C" REFERENCES users (nickname) ON DELETE CASCADE
 );
 
@@ -42,8 +43,8 @@ CREATE TABLE threads
     f_slug     CITEXT COLLATE "C" NOT NULL REFERENCES forums (slug) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_threads_tidhash ON threads USING hash (t_id);
--- CREATE INDEX idx_threads_slughash ON threads USING hash (slug);
+CREATE INDEX idx_threads_tidhash ON threads (t_id);
+CREATE INDEX idx_threads_slughash ON threads (slug);
 
 
 CREATE TABLE voteThreads
@@ -52,8 +53,6 @@ CREATE TABLE voteThreads
     counter    INT DEFAULT 0,
     u_nickname CITEXT COLLATE "C" NOT NULL REFERENCES users (nickname) ON DELETE CASCADE
 );
-
-CREATE UNIQUE INDEX idx_voteth_thrnick ON voteThreads (t_id, u_nickname);
 
 CREATE TABLE messages
 (
@@ -67,8 +66,19 @@ CREATE TABLE messages
     f_slug     CITEXT COLLATE "C" NOT NULL REFERENCES forums (slug) ON DELETE CASCADE,
     t_id       BIGINT             NOT NULL REFERENCES threads ON DELETE CASCADE
 );
-CREATE INDEX idx_messages_mid ON messages (t_id,m_id);
--- CREATE INDEX idx_messages_mid ON messages (t_id,m_id);
+CREATE INDEX idx_messages_tidmid ON messages (t_id,m_id);
+CREATE INDEX idx_messages_mid ON messages (m_id);
+
+
+
+CREATE TABLE forumUsers
+(
+    f_slug     CITEXT COLLATE "C" NOT NULL REFERENCES forums (slug) ON DELETE CASCADE,
+    u_nickname CITEXT COLLATE "C" NOT NULL REFERENCES users (nickname) ON DELETE CASCADE
+);
+
+CREATE UNIQUE INDEX idx_forumusers_slugid ON forumUsers (f_slug, u_nickname);
+
 
 CREATE OR REPLACE FUNCTION updater()
     RETURNS TRIGGER AS
@@ -84,13 +94,4 @@ CREATE TRIGGER path_updater
     ON messages
     FOR EACH ROW
 EXECUTE PROCEDURE updater();
-
-
-CREATE TABLE forumUsers
-(
-    f_slug     CITEXT COLLATE "C" NOT NULL REFERENCES forums (slug) ON DELETE CASCADE,
-    u_nickname CITEXT COLLATE "C" NOT NULL REFERENCES users (nickname) ON DELETE CASCADE
-);
-
-CREATE UNIQUE INDEX idx_forumusers_slugid ON forumUsers (f_slug, u_nickname);
 

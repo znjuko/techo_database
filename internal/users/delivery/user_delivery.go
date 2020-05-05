@@ -9,13 +9,12 @@ import (
 	"net/http"
 )
 
-
 type UserDelivery struct {
 	userUseLogic users.UserUseCase
 }
 
 func NewUserDelivery(userU usecase.UserUseCaseRealisation) UserDelivery {
-	return UserDelivery{userUseLogic:userU}
+	return UserDelivery{userUseLogic: userU}
 }
 
 func (UserD UserDelivery) SetupHandlers(server *echo.Echo) {
@@ -27,7 +26,7 @@ func (UserD UserDelivery) SetupHandlers(server *echo.Echo) {
 }
 
 func (UserD UserDelivery) GetStatus(rwContext echo.Context) error {
-	return rwContext.JSON(http.StatusOK,UserD.userUseLogic.GetServerStatus())
+	return rwContext.JSON(http.StatusOK, UserD.userUseLogic.GetServerStatus())
 }
 
 func (UserD UserDelivery) Clear(rwContext echo.Context) error {
@@ -45,7 +44,7 @@ func (UserD UserDelivery) CreateUser(rwContext echo.Context) error {
 
 	newUserData.Nickname = nickname
 
-	answer , err := UserD.userUseLogic.CreateUser(*newUserData)
+	answer, err := UserD.userUseLogic.CreateUser(*newUserData)
 
 	if err != nil {
 		return rwContext.JSON(http.StatusConflict, answer)
@@ -55,21 +54,19 @@ func (UserD UserDelivery) CreateUser(rwContext echo.Context) error {
 
 }
 
-
 func (UserD UserDelivery) GetUser(rwContext echo.Context) error {
 
 	nickname := rwContext.Param("nickname")
 
-	userData , err := UserD.userUseLogic.GetUser(nickname)
+	userData, err := UserD.userUseLogic.GetUser(nickname)
 
 	if err != nil {
-		return rwContext.JSON(http.StatusNotFound, &models.Error{Message:"Can't find user by nickname: " + nickname})
+		return rwContext.JSON(http.StatusNotFound, &models.Error{Message: "Can't find user by nickname: " + nickname})
 	}
 
 	return rwContext.JSON(http.StatusOK, userData)
 
 }
-
 
 func (UserD UserDelivery) UpdateUser(rwContext echo.Context) error {
 
@@ -81,15 +78,15 @@ func (UserD UserDelivery) UpdateUser(rwContext echo.Context) error {
 
 	newUserData.Nickname = nickname
 
-	answer , err := UserD.userUseLogic.UpdateUserData(*newUserData)
+	answer, err := UserD.userUseLogic.UpdateUserData(*newUserData)
 
 	if err == sql.ErrNoRows {
-		return rwContext.JSON(http.StatusNotFound , &models.Error{Message:"Can't find user by nickname: " + nickname})
+		return rwContext.JSON(http.StatusNotFound, &models.Error{Message: "Can't find user by nickname: " + nickname})
 	}
 
 	if err != nil {
-		return rwContext.JSON(http.StatusConflict , &models.Error{Message:"This email is already registered by user: " + nickname})
+		return rwContext.JSON(http.StatusConflict, &models.Error{Message: "This email is already registered by user: " + nickname})
 	}
 
-	return rwContext.JSON(http.StatusOK,answer)
+	return rwContext.JSON(http.StatusOK, answer)
 }

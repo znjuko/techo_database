@@ -9,5 +9,5 @@ type ForumUse interface {
 	GetForumData(string) (models.Forum, error)
 	CreateThread(string, models.Thread) (models.Thread, error)
 	GetThreads(string, int, string, bool) ([]models.Thread, error)
-	GetForumUsers(string, int, string, bool) ([]models.UserModel ,error)
+	GetForumUsers(string, int, string, bool) ([]models.UserModel, error)
 }

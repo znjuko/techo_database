@@ -37,6 +37,9 @@ func (Thread ThreadRepoRealisation) CreatePost(slug string, id int, posts []mode
 	}
 
 	currentPosts := make([]models.Message, 0)
+	insertQuery := "INSERT INTO forumUsers (f_slug,u_nickname) VALUES "
+	insertValues := make([]interface{}, 0)
+	queryCounter := 1
 
 	for _, value := range posts {
 
@@ -84,7 +87,18 @@ func (Thread ThreadRepoRealisation) CreatePost(slug string, id int, posts []mode
 			currentPosts = append(currentPosts, value)
 		}
 
+		addUserQuery := "($" + strconv.Itoa(queryCounter) + ","
+		queryCounter++
+		addUserQuery += "$" + strconv.Itoa(queryCounter) + "),"
+		queryCounter++
+
+		insertValues = append(insertValues, forumSlug, value.Author)
+		insertQuery += addUserQuery
 	}
+	insertQuery = insertQuery[:len(insertQuery)-1]
+
+	Thread.dbLauncher.Exec(insertQuery, insertValues...)
+	Thread.dbLauncher.Exec("UPDATE forums SET message_counter = message_counter + $1 WHERE slug = $2", len(posts) , forumSlug)
 
 	return currentPosts, nil
 }
@@ -294,7 +308,6 @@ func (Thread ThreadRepoRealisation) GetPostsSorted(slug string, threadId int, li
 		return nil, err
 	}
 
-
 	if data != nil {
 
 		for data.Next() {
@@ -317,7 +330,7 @@ func (Thread ThreadRepoRealisation) GetPostsSorted(slug string, threadId int, li
 		var threadId *int64
 		var threadSlug *string
 
-		if err = trow.Scan(&threadId , &threadSlug); err != nil {
+		if err = trow.Scan(&threadId, &threadSlug); err != nil {
 			fmt.Println(err)
 			return nil, err
 		}

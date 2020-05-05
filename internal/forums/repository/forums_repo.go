@@ -44,18 +44,18 @@ func (Forum ForumRepoRealisation) CreateNewForum(forum models.Forum) (models.For
 func (Forum ForumRepoRealisation) GetForum(slug string) (models.Forum, error) {
 
 	forumData := new(models.Forum)
-	row := Forum.dbLauncher.QueryRow("SELECT slug , title, u_nickname FROM forums WHERE slug = $1", slug)
+	row := Forum.dbLauncher.QueryRow("SELECT slug , title, u_nickname , message_counter FROM forums WHERE slug = $1", slug)
 
-	err := row.Scan(&forumData.Slug, &forumData.Title, &forumData.User)
+	err := row.Scan(&forumData.Slug, &forumData.Title, &forumData.User, &forumData.Posts)
 
 	if err != nil {
 		fmt.Println("[DEBUG] error at method GetForum (scan of forum basic data) :", err)
 		return *forumData, err
 	}
 
-	row = Forum.dbLauncher.QueryRow("SELECT (SELECT COUNT(DISTINCT t_id) FROM threads WHERE f_slug = $1) , (SELECT COUNT(DISTINCT m_id) FROM messages WHERE f_slug = $1)  ", forumData.Slug)
+	row = Forum.dbLauncher.QueryRow("SELECT COUNT(DISTINCT t_id) FROM threads WHERE f_slug = $1 ", forumData.Slug)
 
-	err = row.Scan(&forumData.Threads, &forumData.Posts)
+	err = row.Scan(&forumData.Threads)
 
 	if err != nil {
 		fmt.Println("[DEBUG] error at method GetForum (scan of threads counter) :", err)
@@ -66,8 +66,10 @@ func (Forum ForumRepoRealisation) GetForum(slug string) (models.Forum, error) {
 
 func (Forum ForumRepoRealisation) CreateThread(thread models.Thread) (models.Thread, error) {
 
-	userId := int64(0)
+	//userId := int64(0)
 	var time *string
+	var err error
+	var row *sql.Row
 	insertValues := make([]interface{}, 0)
 	valuesCounter := 4
 	valuesQuery := " VALUES($1 ,$2, $3, $4,"
@@ -75,14 +77,7 @@ func (Forum ForumRepoRealisation) CreateThread(thread models.Thread) (models.Thr
 	insertColumns := "(message , title , u_nickname , f_slug ,"
 	returningQuery := " RETURNING date , t_id"
 
-	row := Forum.dbLauncher.QueryRow("SELECT u_id , nickname FROM users WHERE nickname = $1", thread.Author)
 
-	err := row.Scan(&userId, &thread.Author)
-
-	if err != nil {
-		fmt.Println("[DEBUG] error at method CreateThread (scan of existing user) :", err)
-		return thread, err
-	}
 
 	row = Forum.dbLauncher.QueryRow("SELECT slug FROM forums WHERE slug = $1", thread.Forum)
 
@@ -120,14 +115,24 @@ func (Forum ForumRepoRealisation) CreateThread(thread models.Thread) (models.Thr
 		thread.Created = *time
 	}
 
-	if err != nil {
-		fmt.Println("[DEBUG] error at method CreateThread (creating new forum) :", err)
-		row = Forum.dbLauncher.QueryRow("SELECT u_nickname , date ,f_slug , t_id , message , slug , title , votes FROM threads WHERE slug = $1", thread.Slug)
-		err = row.Scan(&thread.Author, &thread.Created, &thread.Forum, &thread.Id, &thread.Message, &thread.Slug, &thread.Title, &thread.Votes)
-		return thread, errors.New("thread already exist")
+	if err == nil {
+		Forum.dbLauncher.Exec("INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2)", thread.Forum, thread.Author)
+		return thread, nil
 	}
 
-	return thread, nil
+	row = Forum.dbLauncher.QueryRow("SELECT nickname FROM users WHERE nickname = $1", thread.Author)
+
+	err = row.Scan(&thread.Author)
+
+	if err != nil {
+		fmt.Println("[DEBUG] error at method CreateThread (scan of existing user) :", err)
+		return thread, err
+	}
+
+	row = Forum.dbLauncher.QueryRow("SELECT u_nickname , date ,f_slug , t_id , message , slug , title , votes FROM threads WHERE slug = $1", thread.Slug)
+	err = row.Scan(&thread.Author, &thread.Created, &thread.Forum, &thread.Id, &thread.Message, &thread.Slug, &thread.Title, &thread.Votes)
+
+	return thread, errors.New("thread already exist")
 }
 
 func (Forum ForumRepoRealisation) GetThreads(forum models.Forum, limit int, since string, sort bool) ([]models.Thread, error) {
@@ -201,19 +206,18 @@ func (Forum ForumRepoRealisation) GetForumUsers(slug string, limit int, since st
 		ranger = ">"
 	}
 
-	selectRow := "select DISTINCT(U.nickname),U.fullname,U.email,U.about from users U LEFT JOIN threads T ON(T.f_slug=$1 AND T.u_nickname=U.nickname)" +
-		" LEFT JOIN messages M ON(M.u_nickname=U.nickname AND M.f_slug=$1) WHERE (M.m_id IS NOT NULL OR T.t_id IS NOT NULL) "
+	selectRow := "SELECT FU.u_nickname , U.fullname, U.email , U.about FROM forumUsers FU INNER JOIN Users U ON(U.nickname=FU.u_nickname) WHERE FU.f_slug = $1 "
 	if since != "" {
 		if limit == 0 {
-			row, err = Forum.dbLauncher.Query(selectRow+"AND U.nickname "+ranger+" $2 ORDER BY U.nickname "+order, slug, since)
+			row, err = Forum.dbLauncher.Query(selectRow+"AND FU.u_nickname "+ranger+" $2 ORDER BY FU.u_nickname "+order, slug, since)
 		} else {
-			row, err = Forum.dbLauncher.Query(selectRow+" AND U.nickname "+ranger+" $3 ORDER BY U.nickname "+order+" LIMIT $2", slug, limit, since)
+			row, err = Forum.dbLauncher.Query(selectRow+" AND FU.u_nickname "+ranger+" $3 ORDER BY FU.u_nickname "+order+" LIMIT $2", slug, limit, since)
 		}
 	} else {
 		if limit == 0 {
-			row, err = Forum.dbLauncher.Query(selectRow+" ORDER BY U.nickname "+order, slug)
+			row, err = Forum.dbLauncher.Query(selectRow+" ORDER BY FU.u_nickname "+order, slug)
 		} else {
-			row, err = Forum.dbLauncher.Query(selectRow+" ORDER BY U.nickname "+order+" LIMIT $2", slug, limit)
+			row, err = Forum.dbLauncher.Query(selectRow+" ORDER BY FU.u_nickname "+order+" LIMIT $2", slug, limit)
 		}
 	}
 
@@ -243,7 +247,7 @@ func (Forum ForumRepoRealisation) GetForumUsers(slug string, limit int, since st
 		err = frow.Scan(&slug)
 
 		if err != nil {
-			return nil , err
+			return nil, err
 		}
 	}
 

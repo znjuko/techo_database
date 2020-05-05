@@ -19,17 +19,17 @@ func NewUserRepoRealisation(db *sql.DB) UserRepoRealisation {
 
 func (UserData UserRepoRealisation) CreateNewUser(userModel models.UserModel) ([]models.UserModel, error) {
 
-	allData := make([]models.UserModel,0)
+	allData := make([]models.UserModel, 0)
 	var err error
 
 	_, err = UserData.dbLauncher.Exec("INSERT INTO users (nickname , fullname , email , about) VALUES($1 , $2 , $3 ,$4)", userModel.Nickname, userModel.Fullname, userModel.Email, userModel.About)
 
 	if err != nil {
 		fmt.Println(err)
-		row , err := UserData.dbLauncher.Query("SELECT nickname , fullname , email , about FROM users WHERE nickname = $1 OR email = $2", userModel.Nickname, userModel.Email)
+		row, err := UserData.dbLauncher.Query("SELECT nickname , fullname , email , about FROM users WHERE nickname = $1 OR email = $2", userModel.Nickname, userModel.Email)
 
 		if row != nil {
-			for row.Next(){
+			for row.Next() {
 
 				if err == nil {
 					err = errors.New("such user already exists")
@@ -44,16 +44,16 @@ func (UserData UserRepoRealisation) CreateNewUser(userModel models.UserModel) ([
 
 				row.Scan(&existingUser.Nickname, &existingUser.Fullname, &existingUser.Email, &existingUser.About)
 
-				allData = append(allData,existingUser)
+				allData = append(allData, existingUser)
 			}
 
 			row.Close()
 		}
 
-		return allData , errors.New("such user already exists")
+		return allData, errors.New("such user already exists")
 	}
 
-	allData = append(allData,userModel)
+	allData = append(allData, userModel)
 
 	return allData, err
 }
@@ -61,13 +61,13 @@ func (UserData UserRepoRealisation) CreateNewUser(userModel models.UserModel) ([
 func (UserData UserRepoRealisation) UpdateUserData(userModel models.UserModel) (models.UserModel, error) {
 
 	id := 2
-	values := make([]interface{},0)
+	values := make([]interface{}, 0)
 
 	querySting := "UPDATE users SET"
 	nickQuery := " WHERE nickname = $1 RETURNING u_id, nickname, fullname , email, about"
 	reqQuery := ""
 
-	values = append(values , userModel.Nickname)
+	values = append(values, userModel.Nickname)
 
 	if userModel.Email != "" {
 		values = append(values, userModel.Email)
@@ -77,13 +77,13 @@ func (UserData UserRepoRealisation) UpdateUserData(userModel models.UserModel) (
 
 	if userModel.Fullname != "" {
 		values = append(values, userModel.Fullname)
-		reqQuery += " " + "fullname = $" + strconv.Itoa(id) +","
+		reqQuery += " " + "fullname = $" + strconv.Itoa(id) + ","
 		id++
 	}
 
 	if userModel.About != "" {
 		values = append(values, userModel.About)
-		reqQuery += " " + "about = $" + strconv.Itoa(id) +","
+		reqQuery += " " + "about = $" + strconv.Itoa(id) + ","
 		id++
 	}
 
@@ -96,9 +96,8 @@ func (UserData UserRepoRealisation) UpdateUserData(userModel models.UserModel) (
 	if len(values) == 1 {
 		row = UserData.dbLauncher.QueryRow("SELECT u_id, nickname, fullname , email, about FROM users WHERE nickname = $1", values[0])
 	} else {
-		row = UserData.dbLauncher.QueryRow(querySting+ reqQuery + nickQuery, values...)
+		row = UserData.dbLauncher.QueryRow(querySting+reqQuery+nickQuery, values...)
 	}
-
 
 	userId := 0
 
@@ -121,14 +120,14 @@ func (UserData UserRepoRealisation) GetUserData(nickname string) (models.UserMod
 
 	err := row.Scan(&userData.Nickname, &userData.Fullname, &userData.Email, &userData.About)
 
-	return userData , err
+	return userData, err
 }
 
-func (UserData UserRepoRealisation) Status() (models.Status) {
+func (UserData UserRepoRealisation) Status() models.Status {
 
 	statAnsw := new(models.Status)
 	row := UserData.dbLauncher.QueryRow("SELECT (SELECT COUNT(u_id) FROM users) as uc , (SELECT COUNT(f_id) FROM forums) AS fc , (SELECT COUNT(t_id) FROM threads) AS tc , (SELECT COUNT(m_id) FROM messages) AS mc")
-	row.Scan(&statAnsw.User,&statAnsw.Forum,&statAnsw.Thread,&statAnsw.Post)
+	row.Scan(&statAnsw.User, &statAnsw.Forum, &statAnsw.Thread, &statAnsw.Post)
 
 	return *statAnsw
 }

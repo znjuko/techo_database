@@ -14,21 +14,21 @@ func NewUserUseCaseRealisation(db repository.UserRepoRealisation) UserUseCaseRea
 	return UserUseCaseRealisation{repositoryLogic: db}
 }
 
-func (UserU UserUseCaseRealisation) GetUser(nickname string) (models.UserModel , error) {
+func (UserU UserUseCaseRealisation) GetUser(nickname string) (models.UserModel, error) {
 
 	return UserU.repositoryLogic.GetUserData(nickname)
 
 }
 
-func (UserU UserUseCaseRealisation) CreateUser(newUser models.UserModel) (interface{} , error) {
+func (UserU UserUseCaseRealisation) CreateUser(newUser models.UserModel) (interface{}, error) {
 
-	answerData , err := UserU.repositoryLogic.CreateNewUser(newUser)
+	answerData, err := UserU.repositoryLogic.CreateNewUser(newUser)
 
 	if err != nil {
-		return answerData , err
+		return answerData, err
 	}
 
-	return answerData[0] , err
+	return answerData[0], err
 
 }
 
@@ -41,6 +41,6 @@ func (UserU UserUseCaseRealisation) GetServerStatus() models.Status {
 	return UserU.repositoryLogic.Status()
 }
 
-func (UserU UserUseCaseRealisation) Clear()  {
+func (UserU UserUseCaseRealisation) Clear() {
 	UserU.repositoryLogic.Clear()
 }

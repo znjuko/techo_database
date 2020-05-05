@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"github.com/labstack/echo"
 	fD "main/internal/forums/delivery"
 	fR "main/internal/forums/repository"
@@ -9,6 +10,7 @@ import (
 	pD "main/internal/posts/delivery"
 	pR "main/internal/posts/repository"
 	pU "main/internal/posts/usecase"
+	"time"
 
 	tD "main/internal/threads/delivery"
 	tR "main/internal/threads/repository"
@@ -20,20 +22,19 @@ import (
 )
 
 const (
-	usernameDB = "docker"
-	passwordDB = "docker"
-	nameDB     = "docker"
+	usernameDB = "postgres"
+	passwordDB = "postgres"
+	nameDB     = "tp_db"
 )
 
 type RequestHandler struct {
-	userHandler delivery.UserDelivery
-	forumHandler fD.ForumDelivery
+	userHandler   delivery.UserDelivery
+	forumHandler  fD.ForumDelivery
 	threadHandler tD.ThreadDelivery
 	postHandler   pD.PostDelivery
 }
 
 func StartServer(db *sql.DB) *RequestHandler {
-
 
 	postDB := pR.NewPostRepoRealisation(db)
 	postUse := pU.NewPostUseRealistaion(postDB)
@@ -49,7 +50,7 @@ func StartServer(db *sql.DB) *RequestHandler {
 	userUse := usecase.NewUserUseCaseRealisation(userDB)
 	userH := delivery.NewUserDelivery(userUse)
 
-	api := &RequestHandler{userHandler: userH, forumHandler:forumH , threadHandler:threadH, postHandler:postH}
+	api := &RequestHandler{userHandler: userH, forumHandler: forumH, threadHandler: threadH, postHandler: postH}
 
 	return api
 }
@@ -62,11 +63,29 @@ func JSONMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
+func Logs(next echo.HandlerFunc) echo.HandlerFunc {
+
+	return func(rwContext echo.Context) error {
+
+		start := time.Now()
+
+		err := next(rwContext)
+
+		respTime := time.Since(start)
+
+		fmt.Println(respTime.Milliseconds(), rwContext.Request().URL.Path, rwContext.Request().Method)
+
+		return err
+
+	}
+}
+
 func main() {
 
 	server := echo.New()
 
 	server.Use(JSONMiddleware)
+	//server.Use(Logs)
 
 	connectString := "user=" + usernameDB + " password=" + passwordDB + " dbname=" + nameDB + " sslmode=disable"
 
@@ -75,7 +94,6 @@ func main() {
 	if err != nil {
 		server.Logger.Fatal("NO CONNECTION TO BD", err.Error())
 	}
-
 
 	api := StartServer(db)
 

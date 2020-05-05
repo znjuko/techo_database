@@ -64,12 +64,11 @@ func (Forum ForumRepoRealisation) GetForum(slug string) (models.Forum, error) {
 	return *forumData, nil
 }
 
+
 func (Forum ForumRepoRealisation) CreateThread(thread models.Thread) (models.Thread, error) {
 
-	//userId := int64(0)
+	userId := int64(0)
 	var time *string
-	var err error
-	var row *sql.Row
 	insertValues := make([]interface{}, 0)
 	valuesCounter := 4
 	valuesQuery := " VALUES($1 ,$2, $3, $4,"
@@ -77,7 +76,14 @@ func (Forum ForumRepoRealisation) CreateThread(thread models.Thread) (models.Thr
 	insertColumns := "(message , title , u_nickname , f_slug ,"
 	returningQuery := " RETURNING date , t_id"
 
+	row := Forum.dbLauncher.QueryRow("SELECT u_id , nickname FROM users WHERE nickname = $1", thread.Author)
 
+	err := row.Scan(&userId, &thread.Author)
+
+	if err != nil {
+		fmt.Println("[DEBUG] error at method CreateThread (scan of existing user) :", err)
+		return thread, err
+	}
 
 	row = Forum.dbLauncher.QueryRow("SELECT slug FROM forums WHERE slug = $1", thread.Forum)
 
@@ -115,24 +121,15 @@ func (Forum ForumRepoRealisation) CreateThread(thread models.Thread) (models.Thr
 		thread.Created = *time
 	}
 
-	if err == nil {
-		Forum.dbLauncher.Exec("INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2)", thread.Forum, thread.Author)
-		return thread, nil
-	}
-
-	row = Forum.dbLauncher.QueryRow("SELECT nickname FROM users WHERE nickname = $1", thread.Author)
-
-	err = row.Scan(&thread.Author)
-
 	if err != nil {
-		fmt.Println("[DEBUG] error at method CreateThread (scan of existing user) :", err)
-		return thread, err
+		fmt.Println("[DEBUG] error at method CreateThread (creating new forum) :", err)
+		row = Forum.dbLauncher.QueryRow("SELECT u_nickname , date ,f_slug , t_id , message , slug , title , votes FROM threads WHERE slug = $1", thread.Slug)
+		err = row.Scan(&thread.Author, &thread.Created, &thread.Forum, &thread.Id, &thread.Message, &thread.Slug, &thread.Title, &thread.Votes)
+		return thread, errors.New("thread already exist")
 	}
 
-	row = Forum.dbLauncher.QueryRow("SELECT u_nickname , date ,f_slug , t_id , message , slug , title , votes FROM threads WHERE slug = $1", thread.Slug)
-	err = row.Scan(&thread.Author, &thread.Created, &thread.Forum, &thread.Id, &thread.Message, &thread.Slug, &thread.Title, &thread.Votes)
-
-	return thread, errors.New("thread already exist")
+	Forum.dbLauncher.Exec("INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2)", thread.Forum, thread.Author)
+	return thread, nil
 }
 
 func (Forum ForumRepoRealisation) GetThreads(forum models.Forum, limit int, since string, sort bool) ([]models.Thread, error) {

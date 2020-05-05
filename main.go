@@ -85,7 +85,7 @@ func main() {
 	server := echo.New()
 
 	server.Use(JSONMiddleware)
-	//server.Use(Logs)
+	server.Use(Logs)
 
 	connectString := "user=" + usernameDB + " password=" + passwordDB + " dbname=" + nameDB + " sslmode=disable"
 

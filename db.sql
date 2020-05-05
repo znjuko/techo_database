@@ -45,6 +45,7 @@ CREATE TABLE threads
 
 CREATE INDEX idx_threads_tidhash ON threads (t_id);
 CREATE INDEX idx_threads_slughash ON threads (slug);
+CREATE INDEX idx_threads_fslughash ON threads (f_slug);
 
 
 CREATE TABLE voteThreads
@@ -53,6 +54,10 @@ CREATE TABLE voteThreads
     counter    INT DEFAULT 0,
     u_nickname CITEXT COLLATE "C" NOT NULL REFERENCES users (nickname) ON DELETE CASCADE
 );
+
+CREATE INDEX idx_voteth_thrnick ON voteThreads (t_id, u_nickname);
+-- CREATE INDEX idx_voteth_thr ON voteThreads (t_id);
+
 
 CREATE TABLE messages
 (
@@ -66,10 +71,9 @@ CREATE TABLE messages
     f_slug     CITEXT COLLATE "C" NOT NULL REFERENCES forums (slug) ON DELETE CASCADE,
     t_id       BIGINT             NOT NULL REFERENCES threads ON DELETE CASCADE
 );
+
 CREATE INDEX idx_messages_tidmid ON messages (t_id,m_id);
-CREATE INDEX idx_messages_mid ON messages (m_id);
-
-
+CREATE INDEX idx_messages_tid ON messages (t_id);
 
 CREATE TABLE forumUsers
 (

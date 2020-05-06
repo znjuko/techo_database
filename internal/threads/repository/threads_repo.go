@@ -37,9 +37,9 @@ func (Thread ThreadRepoRealisation) CreatePost(slug string, id int, posts []mode
 	}
 
 	currentPosts := make([]models.Message, 0)
-	insertQuery := "INSERT INTO forumUsers (f_slug,u_nickname) VALUES "
-	insertValues := make([]interface{}, 0)
-	queryCounter := 1
+	//insertQuery := "INSERT INTO forumUsers (f_slug,u_nickname) VALUES "
+	//insertValues := make([]interface{}, 0)
+	//queryCounter := 1
 
 	for _, value := range posts {
 
@@ -87,17 +87,9 @@ func (Thread ThreadRepoRealisation) CreatePost(slug string, id int, posts []mode
 			currentPosts = append(currentPosts, value)
 		}
 
-		addUserQuery := "($" + strconv.Itoa(queryCounter) + ","
-		queryCounter++
-		addUserQuery += "$" + strconv.Itoa(queryCounter) + "),"
-		queryCounter++
-
-		insertValues = append(insertValues, forumSlug, value.Author)
-		insertQuery += addUserQuery
+		Thread.dbLauncher.Exec("INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2) " , forumSlug ,value.Author)
 	}
-	insertQuery = insertQuery[:len(insertQuery)-1]
 
-	Thread.dbLauncher.Exec(insertQuery, insertValues...)
 	Thread.dbLauncher.Exec("UPDATE forums SET message_counter = message_counter + $1 WHERE slug = $2", len(posts) , forumSlug)
 
 	return currentPosts, nil
@@ -162,7 +154,7 @@ func (Thread ThreadRepoRealisation) VoteThread(nickname string, voice, threadId 
 			voteCounter := 0
 
 			if voted == 0 {
-				_, err = Thread.dbLauncher.Exec("INSERT INTO voteThreads (t_id , u_nickname, counter) VALUES ($1,$2, $3)", thread.Id, nickname, -1)
+				_, err = Thread.dbLauncher.Exec("INSERT INTO voteThreads (t_id , u_nickname, counter) VALUES ($1,$2,$3)", thread.Id, nickname, -1)
 				voteCounter = 1
 
 			} else {

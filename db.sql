@@ -13,23 +13,23 @@ CREATE TABLE users
 (
     u_id     BIGSERIAL PRIMARY KEY,
     nickname CITEXT COLLATE "C" UNIQUE,
-    fullname VARCHAR(100)       NOT NULL,
-    email    CITEXT             NOT NULL UNIQUE,
+    fullname VARCHAR(100) NOT NULL,
+    email    CITEXT       NOT NULL UNIQUE,
     about    TEXT
 );
 
-CREATE INDEX idx_users_nickname ON users(nickname);
+CREATE INDEX idx_users_nickname ON users USING hash (nickname);
 
 CREATE TABLE forums
 (
-    f_id       BIGSERIAL PRIMARY KEY,
-    slug       CITEXT UNIQUE NOT NULL,
-    title      TEXT,
+    f_id            BIGSERIAL PRIMARY KEY,
+    slug            CITEXT UNIQUE NOT NULL,
+    title           TEXT,
     message_counter BIGINT DEFAULT 0,
-    u_nickname CITEXT COLLATE "C" REFERENCES users (nickname) ON DELETE CASCADE
+    u_nickname      CITEXT COLLATE "C" REFERENCES users (nickname) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_forums_slug ON forums(slug);
+CREATE INDEX idx_forums_slug ON forums USING hash (slug);
 
 CREATE TABLE threads
 (
@@ -43,21 +43,17 @@ CREATE TABLE threads
     f_slug     CITEXT COLLATE "C" NOT NULL REFERENCES forums (slug) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_threads_tidhash ON threads (t_id);
 CREATE INDEX idx_threads_slughash ON threads (slug);
-CREATE INDEX idx_threads_fslughash ON threads (f_slug);
-
 
 CREATE TABLE voteThreads
 (
+    vt_id      BIGSERIAL,
     t_id       BIGINT             NOT NULL REFERENCES threads ON DELETE CASCADE,
     counter    INT DEFAULT 0,
     u_nickname CITEXT COLLATE "C" NOT NULL REFERENCES users (nickname) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_voteth_thrnick ON voteThreads (t_id, u_nickname);
--- CREATE INDEX idx_voteth_thr ON voteThreads (t_id);
-
+CREATE UNIQUE INDEX idx_voteth_thrnick ON voteThreads USING btree (t_id, u_nickname);
 
 CREATE TABLE messages
 (
@@ -72,8 +68,7 @@ CREATE TABLE messages
     t_id       BIGINT             NOT NULL REFERENCES threads ON DELETE CASCADE
 );
 
-CREATE INDEX idx_messages_tidmid ON messages (t_id,m_id);
-CREATE INDEX idx_messages_tid ON messages (t_id);
+CREATE INDEX idx_messages_mid ON messages (t_id, m_id);
 
 CREATE TABLE forumUsers
 (
@@ -82,7 +77,6 @@ CREATE TABLE forumUsers
 );
 
 CREATE UNIQUE INDEX idx_forumusers_slugid ON forumUsers (f_slug, u_nickname);
-
 
 CREATE OR REPLACE FUNCTION updater()
     RETURNS TRIGGER AS

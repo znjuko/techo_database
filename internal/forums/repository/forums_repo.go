@@ -64,7 +64,6 @@ func (Forum ForumRepoRealisation) GetForum(slug string) (models.Forum, error) {
 	return *forumData, nil
 }
 
-
 func (Forum ForumRepoRealisation) CreateThread(thread models.Thread) (models.Thread, error) {
 
 	userId := int64(0)
@@ -128,7 +127,12 @@ func (Forum ForumRepoRealisation) CreateThread(thread models.Thread) (models.Thr
 		return thread, errors.New("thread already exist")
 	}
 
-	Forum.dbLauncher.Exec("INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2)", thread.Forum, thread.Author)
+	_ , err = Forum.dbLauncher.Exec("INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2)", thread.Forum, thread.Author)
+
+	if err != nil {
+		fmt.Println("\n", err , "\n")
+	}
+
 	return thread, nil
 }
 
@@ -203,18 +207,18 @@ func (Forum ForumRepoRealisation) GetForumUsers(slug string, limit int, since st
 		ranger = ">"
 	}
 
-	selectRow := "SELECT FU.u_nickname , U.fullname, U.email , U.about FROM forumUsers FU INNER JOIN Users U ON(U.nickname=FU.u_nickname) WHERE FU.f_slug = $1 "
+	selectRow := "SELECT DISTINCT(U.nickname) , U.fullname, U.email , U.about FROM forumUsers FU INNER JOIN Users U ON(U.nickname=FU.u_nickname) WHERE FU.f_slug = $1 "
 	if since != "" {
 		if limit == 0 {
-			row, err = Forum.dbLauncher.Query(selectRow+"AND FU.u_nickname "+ranger+" $2 ORDER BY FU.u_nickname "+order, slug, since)
+			row, err = Forum.dbLauncher.Query(selectRow+"AND U.nickname "+ranger+" $2 ORDER BY U.nickname "+order, slug, since)
 		} else {
-			row, err = Forum.dbLauncher.Query(selectRow+" AND FU.u_nickname "+ranger+" $3 ORDER BY FU.u_nickname "+order+" LIMIT $2", slug, limit, since)
+			row, err = Forum.dbLauncher.Query(selectRow+" AND U.nickname "+ranger+" $3 ORDER BY U.nickname "+order+" LIMIT $2", slug, limit, since)
 		}
 	} else {
 		if limit == 0 {
-			row, err = Forum.dbLauncher.Query(selectRow+" ORDER BY FU.u_nickname "+order, slug)
+			row, err = Forum.dbLauncher.Query(selectRow+" ORDER BY U.nickname "+order, slug)
 		} else {
-			row, err = Forum.dbLauncher.Query(selectRow+" ORDER BY FU.u_nickname "+order+" LIMIT $2", slug, limit)
+			row, err = Forum.dbLauncher.Query(selectRow+" ORDER BY U.nickname "+order+" LIMIT $2", slug, limit)
 		}
 	}
 

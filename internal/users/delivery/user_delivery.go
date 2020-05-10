@@ -1,7 +1,7 @@
 package delivery
 
 import (
-	"database/sql"
+	"github.com/jackc/pgx"
 	"github.com/labstack/echo"
 	"main/internal/models"
 	"main/internal/users"
@@ -35,7 +35,6 @@ func (UserD UserDelivery) Clear(rwContext echo.Context) error {
 }
 
 func (UserD UserDelivery) CreateUser(rwContext echo.Context) error {
-
 	nickname := rwContext.Param("nickname")
 
 	newUserData := new(models.UserModel)
@@ -80,7 +79,7 @@ func (UserD UserDelivery) UpdateUser(rwContext echo.Context) error {
 
 	answer, err := UserD.userUseLogic.UpdateUserData(*newUserData)
 
-	if err == sql.ErrNoRows {
+	if err == pgx.ErrNoRows {
 		return rwContext.JSON(http.StatusNotFound, &models.Error{Message: "Can't find user by nickname: " + nickname})
 	}
 

@@ -1,26 +1,27 @@
 package repository
 
 import (
-	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/jackc/pgx"
 	"main/internal/models"
 	"strconv"
+	"time"
 )
 
 type ForumRepoRealisation struct {
-	dbLauncher *sql.DB
+	database *pgx.ConnPool
 }
 
-func NewForumRepoRealisation(db *sql.DB) ForumRepoRealisation {
-	return ForumRepoRealisation{dbLauncher: db}
+func NewForumRepoRealisation(db *pgx.ConnPool) ForumRepoRealisation {
+	return ForumRepoRealisation{database: db}
 }
 
 func (Forum ForumRepoRealisation) CreateNewForum(forum models.Forum) (models.Forum, error) {
 
 	userId := 0
 
-	row := Forum.dbLauncher.QueryRow("SELECT u_id , nickname FROM users WHERE nickname = $1", forum.User)
+	row := Forum.database.QueryRow("SELECT u_id , nickname FROM users WHERE nickname = $1", forum.User)
 
 	err := row.Scan(&userId, &forum.User)
 
@@ -29,10 +30,10 @@ func (Forum ForumRepoRealisation) CreateNewForum(forum models.Forum) (models.For
 		return forum, err
 	}
 
-	_, err = Forum.dbLauncher.Exec("INSERT INTO forums (slug , title, u_nickname) VALUES($1 , $2 , $3)", forum.Slug, forum.Title, forum.User)
+	_, err = Forum.database.Exec("INSERT INTO forums (slug , title, u_nickname) VALUES($1 , $2 , $3)", forum.Slug, forum.Title, forum.User)
 
 	if err != nil {
-		row := Forum.dbLauncher.QueryRow("SELECT u_nickname , title , slug FROM forums WHERE slug = $1;", forum.Slug)
+		row := Forum.database.QueryRow("SELECT u_nickname , title , slug FROM forums WHERE slug = $1;", forum.Slug)
 
 		row.Scan(&forum.User, &forum.Title, &forum.Slug)
 		return forum, err
@@ -44,7 +45,7 @@ func (Forum ForumRepoRealisation) CreateNewForum(forum models.Forum) (models.For
 func (Forum ForumRepoRealisation) GetForum(slug string) (models.Forum, error) {
 
 	forumData := new(models.Forum)
-	row := Forum.dbLauncher.QueryRow("SELECT slug , title, u_nickname , message_counter FROM forums WHERE slug = $1", slug)
+	row := Forum.database.QueryRow("SELECT slug , title, u_nickname , message_counter FROM forums WHERE slug = $1", slug)
 
 	err := row.Scan(&forumData.Slug, &forumData.Title, &forumData.User, &forumData.Posts)
 
@@ -53,7 +54,7 @@ func (Forum ForumRepoRealisation) GetForum(slug string) (models.Forum, error) {
 		return *forumData, err
 	}
 
-	row = Forum.dbLauncher.QueryRow("SELECT COUNT(DISTINCT t_id) FROM threads WHERE f_slug = $1 ", forumData.Slug)
+	row = Forum.database.QueryRow("SELECT COUNT(DISTINCT t_id) FROM threads WHERE f_slug = $1 ", forumData.Slug)
 
 	err = row.Scan(&forumData.Threads)
 
@@ -67,7 +68,7 @@ func (Forum ForumRepoRealisation) GetForum(slug string) (models.Forum, error) {
 func (Forum ForumRepoRealisation) CreateThread(thread models.Thread) (models.Thread, error) {
 
 	userId := int64(0)
-	var time *string
+	var timer time.Time
 	insertValues := make([]interface{}, 0)
 	valuesCounter := 4
 	valuesQuery := " VALUES($1 ,$2, $3, $4,"
@@ -75,7 +76,7 @@ func (Forum ForumRepoRealisation) CreateThread(thread models.Thread) (models.Thr
 	insertColumns := "(message , title , u_nickname , f_slug ,"
 	returningQuery := " RETURNING date , t_id"
 
-	row := Forum.dbLauncher.QueryRow("SELECT u_id , nickname FROM users WHERE nickname = $1", thread.Author)
+	row := Forum.database.QueryRow("SELECT u_id , nickname FROM users WHERE nickname = $1", thread.Author)
 
 	err := row.Scan(&userId, &thread.Author)
 
@@ -84,7 +85,7 @@ func (Forum ForumRepoRealisation) CreateThread(thread models.Thread) (models.Thr
 		return thread, err
 	}
 
-	row = Forum.dbLauncher.QueryRow("SELECT slug FROM forums WHERE slug = $1", thread.Forum)
+	row = Forum.database.QueryRow("SELECT slug FROM forums WHERE slug = $1", thread.Forum)
 
 	err = row.Scan(&thread.Forum)
 
@@ -102,7 +103,7 @@ func (Forum ForumRepoRealisation) CreateThread(thread models.Thread) (models.Thr
 		valuesQuery += " $" + strconv.Itoa(valuesCounter) + ","
 	}
 
-	if thread.Created != "" {
+	if thread.Created.String() != "" {
 		insertColumns += " date,"
 		insertValues = append(insertValues, thread.Created)
 		valuesCounter++
@@ -112,25 +113,27 @@ func (Forum ForumRepoRealisation) CreateThread(thread models.Thread) (models.Thr
 	insertColumns = insertColumns[:len(insertColumns)-1] + ")"
 	valuesQuery = valuesQuery[:len(valuesQuery)-1] + ")"
 
-	row = Forum.dbLauncher.QueryRow(insertQuery+insertColumns+valuesQuery+returningQuery, insertValues...)
+	row = Forum.database.QueryRow(insertQuery+insertColumns+valuesQuery+returningQuery, insertValues...)
 
-	err = row.Scan(&time, &thread.Id)
+	err = row.Scan(&timer, &thread.Id)
 
-	if time != nil {
-		thread.Created = *time
+	if timer.String() != "" {
+		timer.Format(time.RFC3339)
+
+		thread.Created = timer
 	}
 
 	if err != nil {
 		fmt.Println("[DEBUG] error at method CreateThread (creating new forum) :", err)
-		row = Forum.dbLauncher.QueryRow("SELECT u_nickname , date ,f_slug , t_id , message , slug , title , votes FROM threads WHERE slug = $1", thread.Slug)
+		row = Forum.database.QueryRow("SELECT u_nickname , date ,f_slug , t_id , message , slug , title , votes FROM threads WHERE slug = $1", thread.Slug)
 		err = row.Scan(&thread.Author, &thread.Created, &thread.Forum, &thread.Id, &thread.Message, &thread.Slug, &thread.Title, &thread.Votes)
 		return thread, errors.New("thread already exist")
 	}
 
-	_ , err = Forum.dbLauncher.Exec("INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2)", thread.Forum, thread.Author)
+	_, err = Forum.database.Exec("INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2)", thread.Forum, thread.Author)
 
 	if err != nil {
-		fmt.Println("\n", err , "\n")
+		fmt.Println("\n", err, "\n")
 	}
 
 	return thread, nil
@@ -147,13 +150,13 @@ func (Forum ForumRepoRealisation) GetThreads(forum models.Forum, limit int, sinc
 		orderStatus = "ASC"
 	}
 
-	var rowThreads *sql.Rows
+	var rowThreads *pgx.Rows
 	selectRow := "SELECT t_id , date , message , title , votes , slug , f_slug , u_nickname FROM threads T "
 	if since != "" {
 		sinceStatus := "WHERE date" + sorter + "=$2" + " "
-		rowThreads, err = Forum.dbLauncher.Query(selectRow+sinceStatus+"AND f_slug = $3 ORDER BY date "+orderStatus+" LIMIT $1", limit, since, forum.Slug)
+		rowThreads, err = Forum.database.Query(selectRow+sinceStatus+"AND f_slug = $3 ORDER BY date "+orderStatus+" LIMIT $1", limit, since, forum.Slug)
 	} else {
-		rowThreads, err = Forum.dbLauncher.Query(selectRow+"WHERE f_slug = $2 "+"ORDER BY date "+orderStatus+" LIMIT $1", limit, forum.Slug)
+		rowThreads, err = Forum.database.Query(selectRow+"WHERE f_slug = $2 "+"ORDER BY date "+orderStatus+" LIMIT $1", limit, forum.Slug)
 	}
 
 	if err != nil {
@@ -186,7 +189,7 @@ func (Forum ForumRepoRealisation) GetThreads(forum models.Forum, limit int, sinc
 	}
 
 	if len(threads) == 0 {
-		row := Forum.dbLauncher.QueryRow("SELECT slug FROM forums WHERE slug = $1", forum.Slug)
+		row := Forum.database.QueryRow("SELECT slug FROM forums WHERE slug = $1", forum.Slug)
 		err = row.Scan(&forum.Slug)
 	}
 
@@ -196,7 +199,7 @@ func (Forum ForumRepoRealisation) GetThreads(forum models.Forum, limit int, sinc
 func (Forum ForumRepoRealisation) GetForumUsers(slug string, limit int, since string, desc bool) ([]models.UserModel, error) {
 
 	var err error
-	var row *sql.Rows
+	var row *pgx.Rows
 
 	order := "DESC"
 	ranger := "<"
@@ -210,15 +213,15 @@ func (Forum ForumRepoRealisation) GetForumUsers(slug string, limit int, since st
 	selectRow := "SELECT DISTINCT(U.nickname) , U.fullname, U.email , U.about FROM forumUsers FU INNER JOIN Users U ON(U.nickname=FU.u_nickname) WHERE FU.f_slug = $1 "
 	if since != "" {
 		if limit == 0 {
-			row, err = Forum.dbLauncher.Query(selectRow+"AND U.nickname "+ranger+" $2 ORDER BY U.nickname "+order, slug, since)
+			row, err = Forum.database.Query(selectRow+"AND U.nickname "+ranger+" $2 ORDER BY U.nickname "+order, slug, since)
 		} else {
-			row, err = Forum.dbLauncher.Query(selectRow+" AND U.nickname "+ranger+" $3 ORDER BY U.nickname "+order+" LIMIT $2", slug, limit, since)
+			row, err = Forum.database.Query(selectRow+" AND U.nickname "+ranger+" $3 ORDER BY U.nickname "+order+" LIMIT $2", slug, limit, since)
 		}
 	} else {
 		if limit == 0 {
-			row, err = Forum.dbLauncher.Query(selectRow+" ORDER BY U.nickname "+order, slug)
+			row, err = Forum.database.Query(selectRow+" ORDER BY U.nickname "+order, slug)
 		} else {
-			row, err = Forum.dbLauncher.Query(selectRow+" ORDER BY U.nickname "+order+" LIMIT $2", slug, limit)
+			row, err = Forum.database.Query(selectRow+" ORDER BY U.nickname "+order+" LIMIT $2", slug, limit)
 		}
 	}
 
@@ -244,7 +247,7 @@ func (Forum ForumRepoRealisation) GetForumUsers(slug string, limit int, since st
 	}
 
 	if len(users) == 0 {
-		frow := Forum.dbLauncher.QueryRow("SELECT slug FROM forums WHERE slug = $1", slug)
+		frow := Forum.database.QueryRow("SELECT slug FROM forums WHERE slug = $1", slug)
 		err = frow.Scan(&slug)
 
 		if err != nil {

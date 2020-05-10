@@ -1,20 +1,20 @@
 package repository
 
 import (
-	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/jackc/pgx"
 	_ "github.com/lib/pq"
 	"main/internal/models"
 	"strconv"
 )
 
 type UserRepoRealisation struct {
-	dbLauncher *sql.DB
+	database *pgx.ConnPool
 }
 
-func NewUserRepoRealisation(db *sql.DB) UserRepoRealisation {
-	return UserRepoRealisation{dbLauncher: db}
+func NewUserRepoRealisation(db *pgx.ConnPool) UserRepoRealisation {
+	return UserRepoRealisation{database: db}
 }
 
 func (UserData UserRepoRealisation) CreateNewUser(userModel models.UserModel) ([]models.UserModel, error) {
@@ -22,11 +22,11 @@ func (UserData UserRepoRealisation) CreateNewUser(userModel models.UserModel) ([
 	allData := make([]models.UserModel, 0)
 	var err error
 
-	_, err = UserData.dbLauncher.Exec("INSERT INTO users (nickname , fullname , email , about) VALUES($1 , $2 , $3 ,$4)", userModel.Nickname, userModel.Fullname, userModel.Email, userModel.About)
+	_, err = UserData.database.Exec("INSERT INTO users (nickname , fullname , email , about) VALUES($1 , $2 , $3 ,$4)", userModel.Nickname, userModel.Fullname, userModel.Email, userModel.About)
 
 	if err != nil {
 		fmt.Println(err)
-		row, err := UserData.dbLauncher.Query("SELECT nickname , fullname , email , about FROM users WHERE nickname = $1 OR email = $2", userModel.Nickname, userModel.Email)
+		row, err := UserData.database.Query("SELECT nickname , fullname , email , about FROM users WHERE nickname = $1 OR email = $2", userModel.Nickname, userModel.Email)
 
 		if row != nil {
 			for row.Next() {
@@ -91,12 +91,12 @@ func (UserData UserRepoRealisation) UpdateUserData(userModel models.UserModel) (
 		reqQuery = reqQuery[:len(reqQuery)-1]
 	}
 
-	var row *sql.Row
+	var row *pgx.Row
 
 	if len(values) == 1 {
-		row = UserData.dbLauncher.QueryRow("SELECT u_id, nickname, fullname , email, about FROM users WHERE nickname = $1", values[0])
+		row = UserData.database.QueryRow("SELECT u_id, nickname, fullname , email, about FROM users WHERE nickname = $1", values[0])
 	} else {
-		row = UserData.dbLauncher.QueryRow(querySting+reqQuery+nickQuery, values...)
+		row = UserData.database.QueryRow(querySting+reqQuery+nickQuery, values...)
 	}
 
 	userId := 0
@@ -116,7 +116,7 @@ func (UserData UserRepoRealisation) GetUserData(nickname string) (models.UserMod
 		About:    "",
 	}
 
-	row := UserData.dbLauncher.QueryRow("SELECT nickname , fullname , email, about FROM users WHERE nickname = $1", nickname)
+	row := UserData.database.QueryRow("SELECT nickname , fullname , email, about FROM users WHERE nickname = $1", nickname)
 
 	err := row.Scan(&userData.Nickname, &userData.Fullname, &userData.Email, &userData.About)
 
@@ -126,17 +126,17 @@ func (UserData UserRepoRealisation) GetUserData(nickname string) (models.UserMod
 func (UserData UserRepoRealisation) Status() models.Status {
 
 	statAnsw := new(models.Status)
-	row := UserData.dbLauncher.QueryRow("SELECT (SELECT COUNT(u_id) FROM users) as uc , (SELECT COUNT(f_id) FROM forums) AS fc , (SELECT COUNT(t_id) FROM threads) AS tc , (SELECT COUNT(m_id) FROM messages) AS mc")
+	row := UserData.database.QueryRow("SELECT (SELECT COUNT(u_id) FROM users) as uc , (SELECT COUNT(f_id) FROM forums) AS fc , (SELECT COUNT(t_id) FROM threads) AS tc , (SELECT COUNT(m_id) FROM messages) AS mc")
 	row.Scan(&statAnsw.User, &statAnsw.Forum, &statAnsw.Thread, &statAnsw.Post)
 
 	return *statAnsw
 }
 
 func (UserData UserRepoRealisation) Clear() {
-	UserData.dbLauncher.Exec("DELETE FROM users;")
-	UserData.dbLauncher.Exec("DELETE FROM forums;")
-	UserData.dbLauncher.Exec("DELETE FROM threads;")
-	UserData.dbLauncher.Exec("DELETE FROM messages;")
-	UserData.dbLauncher.Exec("DELETE FROM voteThreads;")
-	UserData.dbLauncher.Exec("DELETE FROM forumUsers;")
+	UserData.database.Exec("DELETE FROM users;")
+	UserData.database.Exec("DELETE FROM forums;")
+	UserData.database.Exec("DELETE FROM threads;")
+	UserData.database.Exec("DELETE FROM messages;")
+	UserData.database.Exec("DELETE FROM voteThreads;")
+	UserData.database.Exec("DELETE FROM forumUsers;")
 }

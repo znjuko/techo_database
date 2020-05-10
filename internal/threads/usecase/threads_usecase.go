@@ -5,6 +5,7 @@ import (
 	"main/internal/threads"
 	"main/internal/threads/repository"
 	"strconv"
+	"time"
 )
 
 type ThreadsUseRealistaion struct {
@@ -25,7 +26,23 @@ func (ThreadU ThreadsUseRealistaion) CreatePosts(slugOrId string, posts []models
 		slugOrId = ""
 	}
 
-	return ThreadU.threadRepo.CreatePost(slugOrId, id, posts)
+	threadId, forumSlug, err := ThreadU.threadRepo.SelectThreadInfo(slugOrId, id)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for iter, _ := range posts {
+		posts[iter], err = ThreadU.threadRepo.GetParent(threadId, posts[iter])
+
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	t := time.Now()
+
+	return ThreadU.threadRepo.CreatePost(t, forumSlug, threadId, posts)
 }
 
 func (ThreadU ThreadsUseRealistaion) VoteThread(slug, nickname string, voice int) (models.Thread, error) {

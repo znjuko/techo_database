@@ -1,7 +1,7 @@
 package delivery
 
 import (
-	"database/sql"
+	"github.com/jackc/pgx"
 	"github.com/labstack/echo"
 	"main/internal/models"
 	"main/internal/threads"
@@ -27,13 +27,13 @@ func (Thread ThreadDelivery) CreatePosts(rwContext echo.Context) error {
 
 	posts, err := Thread.threadLogic.CreatePosts(slugOrId, posts)
 
-	if err == sql.ErrNoRows {
+	if err == pgx.ErrNoRows {
 		return rwContext.JSON(http.StatusNotFound, models.Error{Message: "can't find thread by slug_or_id: " + slugOrId})
 	}
 
 	if err != nil {
 		if err.Error() == "no user" {
-			return rwContext.JSON(http.StatusNotFound, models.Error{Message: "Can't find post author by nickname: " + posts[0].Author})
+			return rwContext.JSON(http.StatusNotFound, models.Error{Message: "Can't find post author by nickname: "})
 		}
 
 		if err.Error() == "No parent message!" {

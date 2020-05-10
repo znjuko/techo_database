@@ -19,6 +19,7 @@ CREATE TABLE users
 );
 
 CREATE INDEX idx_users_nickname ON users USING hash (nickname);
+CREATE INDEX idx_users_email ON users USING hash (email);
 
 CREATE TABLE forums
 (

@@ -1,7 +1,7 @@
 package delivery
 
 import (
-	"database/sql"
+	"github.com/jackc/pgx"
 	"github.com/labstack/echo"
 	"main/internal/forums"
 	"main/internal/forums/usecase"
@@ -25,7 +25,7 @@ func (ForumD ForumDelivery) CreateForum(rwContext echo.Context) error {
 
 	answer, err := ForumD.forumLogic.CreateForum(*newForumData)
 
-	if err == sql.ErrNoRows {
+	if err == pgx.ErrNoRows {
 		return rwContext.JSON(http.StatusNotFound, &models.Error{Message: "Can't find user by nickname: " + newForumData.User})
 	}
 
@@ -57,7 +57,7 @@ func (ForumD ForumDelivery) GetForum(rwContext echo.Context) error {
 
 	answer, err := ForumD.forumLogic.GetForumData(slug)
 
-	if err == sql.ErrNoRows {
+	if err == pgx.ErrNoRows {
 		return rwContext.JSON(http.StatusNotFound, &models.Error{Message: "Can't find forum by slug: " + slug})
 	}
 
@@ -73,7 +73,7 @@ func (ForumD ForumDelivery) CreateThread(rwContext echo.Context) error {
 
 	thread, err := ForumD.forumLogic.CreateThread(slug, *threadReq)
 
-	if err == sql.ErrNoRows {
+	if err == pgx.ErrNoRows {
 		return rwContext.JSON(http.StatusNotFound, &models.Error{Message: "Can't create thread by slug: " + slug})
 	}
 

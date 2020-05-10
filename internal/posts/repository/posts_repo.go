@@ -1,16 +1,16 @@
 package repository
 
 import (
-	"database/sql"
 	"fmt"
+	"github.com/jackc/pgx"
 	"main/internal/models"
 )
 
 type PostRepoRealisation struct {
-	dbLauncher *sql.DB
+	dbLauncher *pgx.ConnPool
 }
 
-func NewPostRepoRealisation(db *sql.DB) PostRepoRealisation {
+func NewPostRepoRealisation(db *pgx.ConnPool) PostRepoRealisation {
 	return PostRepoRealisation{dbLauncher: db}
 }
 
@@ -77,7 +77,7 @@ func (PostRepo PostRepoRealisation) GetPost(id int, flags []string) (models.AllP
 
 func (PostRepo PostRepoRealisation) UpdatePost(updateData models.Message) (models.Message, error) {
 
-	var row *sql.Row
+	var row *pgx.Row
 	if updateData.Message != "" {
 		row = PostRepo.dbLauncher.QueryRow("UPDATE messages SET edit = CASE WHEN message = $1 THEN FALSE ELSE TRUE END , message = $1  WHERE m_id = $2 RETURNING m_id , date , message , edit, parent , u_nickname , f_slug , t_id", updateData.Message, updateData.Id)
 	} else {

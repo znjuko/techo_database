@@ -64,8 +64,6 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, forumSlug string
 	return currentPosts, nil
 }
 
-//
-
 func (Thread ThreadRepoRealisation) SelectThreadInfo(slug string, id int) (int, string, error) {
 	threadId := 0
 	forumSlug := ""

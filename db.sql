@@ -18,9 +18,9 @@ CREATE TABLE users
     about    TEXT
 );
 
-CREATE INDEX idx_users_nicknameemail ON users(nickname,email);
+-- CREATE INDEX idx_users_nicknameemail ON users(nickname,email);
 CREATE INDEX idx_users_nickname ON users(nickname);
-CREATE INDEX idx_users_email ON users(email);
+-- CREATE INDEX idx_users_email ON users(email);
 
 CREATE TABLE forums
 (
@@ -32,9 +32,9 @@ CREATE TABLE forums
     u_nickname      CITEXT COLLATE "C" REFERENCES users (nickname) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_forums_slugu_nickname ON forums(slug,u_nickname);
+
 CREATE INDEX idx_forums_slug ON forums(slug);
-CREATE INDEX idx_forums_u_nickname ON forums(u_nickname);
+
 
 CREATE TABLE threads
 (
@@ -48,8 +48,7 @@ CREATE TABLE threads
     f_slug     CITEXT COLLATE "C" NOT NULL REFERENCES forums (slug) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_threads_slugnickfslug ON threads (slug,u_nickname,f_slug);
-CREATE INDEX idx_threads_unick ON threads (u_nickname);
+
 CREATE INDEX idx_threads_fslug ON threads (f_slug);
 CREATE INDEX idx_threads_slughash ON threads (slug);
 
@@ -77,9 +76,8 @@ CREATE TABLE messages
 );
 
 CREATE INDEX idx_messages_tidmid ON messages (t_id, m_id);
-CREATE INDEX idx_messages_mid ON messages (m_id);
--- CREATE INDEX idx_messages_tidfslug ON messages (t_id,f_slug);
 CREATE INDEX idx_messages_tid ON messages (t_id);
+CREATE INDEX idx_messages_parent_tree ON messages (t_id,path);
 
 CREATE TABLE forumUsers
 (

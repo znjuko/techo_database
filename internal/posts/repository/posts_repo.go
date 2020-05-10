@@ -40,17 +40,13 @@ func (PostRepo PostRepoRealisation) GetPost(id int, flags []string) (models.AllP
 
 		case "forum":
 			forum := new(models.Forum)
-			row = PostRepo.dbLauncher.QueryRow("SELECT slug , title , u_nickname, message_counter FROM forums WHERE slug= $1", msg.Forum)
+			row = PostRepo.dbLauncher.QueryRow("SELECT slug , title , u_nickname, message_counter , thread_counter FROM forums WHERE slug= $1", msg.Forum)
 
-			err = row.Scan(&forum.Slug, &forum.Title, &forum.User, &forum.Posts)
+			err = row.Scan(&forum.Slug, &forum.Title, &forum.User, &forum.Posts ,&forum.Threads)
 
 			if err != nil {
 				fmt.Println(err, "can't find a forum")
 			}
-
-			row = PostRepo.dbLauncher.QueryRow("SELECT COUNT(DISTINCT t_id) FROM threads WHERE f_slug = $1", forum.Slug)
-
-			err = row.Scan(&forum.Threads)
 
 			answer.Forum = forum
 

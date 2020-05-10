@@ -76,8 +76,9 @@ CREATE TABLE messages
     t_id       BIGINT             NOT NULL REFERENCES threads ON DELETE CASCADE
 );
 
-CREATE INDEX idx_messages_mid ON messages (t_id, m_id,f_slug);
-CREATE INDEX idx_messages_tidfslug ON messages (t_id,f_slug);
+CREATE INDEX idx_messages_tidmid ON messages (t_id, m_id);
+CREATE INDEX idx_messages_mid ON messages (m_id);
+-- CREATE INDEX idx_messages_tidfslug ON messages (t_id,f_slug);
 CREATE INDEX idx_messages_tid ON messages (t_id);
 
 CREATE TABLE forumUsers

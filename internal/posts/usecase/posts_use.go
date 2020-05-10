@@ -19,5 +19,5 @@ func (PostU PostUseRealisation) GetPostData(id int, flags []string) (models.AllP
 }
 
 func (PostU PostUseRealisation) UpdatePost(id int64, message string) (models.Message, error) {
-	return PostU.postRepo.UpdatePost(models.Message{Id:id,Message:message})
+	return PostU.postRepo.UpdatePost(models.Message{Id: id, Message: message})
 }

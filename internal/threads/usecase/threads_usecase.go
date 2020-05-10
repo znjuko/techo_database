@@ -5,6 +5,7 @@ import (
 	"main/internal/threads"
 	"main/internal/threads/repository"
 	"strconv"
+	"time"
 )
 
 type ThreadsUseRealistaion struct {
@@ -15,9 +16,9 @@ func NewThreadsUseRealisation(tRep repository.ThreadRepoRealisation) ThreadsUseR
 	return ThreadsUseRealistaion{threadRepo: tRep}
 }
 
-func (ThreadU ThreadsUseRealistaion) CreatePosts(slugOrId string ,posts []models.Message) ([]models.Message, error) {
+func (ThreadU ThreadsUseRealistaion) CreatePosts(slugOrId string, posts []models.Message) ([]models.Message, error) {
 
-	id , err := strconv.Atoi(slugOrId)
+	id, err := strconv.Atoi(slugOrId)
 
 	if err != nil {
 		id = 0
@@ -25,12 +26,28 @@ func (ThreadU ThreadsUseRealistaion) CreatePosts(slugOrId string ,posts []models
 		slugOrId = ""
 	}
 
-	return ThreadU.threadRepo.CreatePost(slugOrId,id,posts)
+	threadId, forumSlug, err := ThreadU.threadRepo.SelectThreadInfo(slugOrId, id)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for iter, _ := range posts {
+		posts[iter], err = ThreadU.threadRepo.GetParent(threadId, posts[iter])
+
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	t := time.Now()
+
+	return ThreadU.threadRepo.CreatePost(t, forumSlug, threadId, posts)
 }
 
-func (ThreadU ThreadsUseRealistaion) VoteThread(slug , nickname string , voice int) (models.Thread, error){
+func (ThreadU ThreadsUseRealistaion) VoteThread(slug, nickname string, voice int) (models.Thread, error) {
 
-	threadId , err := strconv.Atoi(slug)
+	threadId, err := strconv.Atoi(slug)
 
 	if err != nil {
 		threadId = 0
@@ -38,12 +55,12 @@ func (ThreadU ThreadsUseRealistaion) VoteThread(slug , nickname string , voice i
 		slug = ""
 	}
 
-	return ThreadU.threadRepo.VoteThread(nickname,voice,threadId,models.Thread{Slug:slug})
+	return ThreadU.threadRepo.VoteThread(nickname, voice, threadId, models.Thread{Slug: slug})
 }
 
-func (ThreadU ThreadsUseRealistaion) GetThread(slug string) (models.Thread, error){
+func (ThreadU ThreadsUseRealistaion) GetThread(slug string) (models.Thread, error) {
 
-	threadId , err := strconv.Atoi(slug)
+	threadId, err := strconv.Atoi(slug)
 
 	if err != nil {
 		threadId = 0
@@ -51,12 +68,12 @@ func (ThreadU ThreadsUseRealistaion) GetThread(slug string) (models.Thread, erro
 		slug = ""
 	}
 
-	return ThreadU.threadRepo.GetThread(threadId,models.Thread{Slug:slug})
+	return ThreadU.threadRepo.GetThread(threadId, models.Thread{Slug: slug})
 }
 
-func (ThreadU ThreadsUseRealistaion) GetPosts(slugOrId string,limit int, since int , sortType string , desc bool) ([]models.Message,error) {
+func (ThreadU ThreadsUseRealistaion) GetPosts(slugOrId string, limit int, since int, sortType string, desc bool) ([]models.Message, error) {
 
-	threadId , err := strconv.Atoi(slugOrId)
+	threadId, err := strconv.Atoi(slugOrId)
 
 	if err != nil {
 		threadId = 0
@@ -64,12 +81,12 @@ func (ThreadU ThreadsUseRealistaion) GetPosts(slugOrId string,limit int, since i
 		slugOrId = ""
 	}
 
-	data , err := ThreadU.threadRepo.GetPostsSorted(slugOrId, threadId, limit, since,sortType, desc)
-	return data , err
+	data, err := ThreadU.threadRepo.GetPostsSorted(slugOrId, threadId, limit, since, sortType, desc)
+	return data, err
 }
 
-func (ThreadU ThreadsUseRealistaion) UpdateThread(slugOrId string, newThreadData models.Thread) (models.Thread, error){
-	threadId , err := strconv.Atoi(slugOrId)
+func (ThreadU ThreadsUseRealistaion) UpdateThread(slugOrId string, newThreadData models.Thread) (models.Thread, error) {
+	threadId, err := strconv.Atoi(slugOrId)
 
 	if err != nil {
 		threadId = 0
@@ -77,6 +94,5 @@ func (ThreadU ThreadsUseRealistaion) UpdateThread(slugOrId string, newThreadData
 		slugOrId = ""
 	}
 
-	return ThreadU.threadRepo.UpdateThread(slugOrId, threadId,newThreadData)
+	return ThreadU.threadRepo.UpdateThread(slugOrId, threadId, newThreadData)
 }
-

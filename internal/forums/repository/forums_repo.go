@@ -45,21 +45,13 @@ func (Forum ForumRepoRealisation) CreateNewForum(forum models.Forum) (models.For
 func (Forum ForumRepoRealisation) GetForum(slug string) (models.Forum, error) {
 
 	forumData := new(models.Forum)
-	row := Forum.database.QueryRow("SELECT slug , title, u_nickname , message_counter FROM forums WHERE slug = $1", slug)
+	row := Forum.database.QueryRow("SELECT slug , title, u_nickname , message_counter , thread_counter FROM forums WHERE slug = $1", slug)
 
-	err := row.Scan(&forumData.Slug, &forumData.Title, &forumData.User, &forumData.Posts)
+	err := row.Scan(&forumData.Slug, &forumData.Title, &forumData.User, &forumData.Posts, &forumData.Threads)
 
 	if err != nil {
 		fmt.Println("[DEBUG] error at method GetForum (scan of forum basic data) :", err)
 		return *forumData, err
-	}
-
-	row = Forum.database.QueryRow("SELECT COUNT(DISTINCT t_id) FROM threads WHERE f_slug = $1 ", forumData.Slug)
-
-	err = row.Scan(&forumData.Threads)
-
-	if err != nil {
-		fmt.Println("[DEBUG] error at method GetForum (scan of threads counter) :", err)
 	}
 
 	return *forumData, nil
@@ -131,6 +123,12 @@ func (Forum ForumRepoRealisation) CreateThread(thread models.Thread) (models.Thr
 	}
 
 	_, err = Forum.database.Exec("INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2)", thread.Forum, thread.Author)
+
+	if err != nil {
+		fmt.Println("\n", err, "\n")
+	}
+
+	_, err = Forum.database.Exec("UPDATE forums SET thread_counter = thread_counter +1 WHERE slug = $1", thread.Forum)
 
 	if err != nil {
 		fmt.Println("\n", err, "\n")

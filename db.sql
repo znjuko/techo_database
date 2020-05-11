@@ -18,9 +18,7 @@ CREATE TABLE users
     about    TEXT
 );
 
--- CREATE INDEX idx_users_nicknameemail ON users(nickname,email);
 CREATE INDEX idx_users_nickname ON users(nickname);
--- CREATE INDEX idx_users_email ON users(email);
 
 CREATE TABLE forums
 (

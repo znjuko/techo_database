@@ -50,23 +50,10 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, forumSlug string
 			fmt.Println("[DEBUG] TX ROLLBACK ERROR", err)
 			return nil, errors.New("no user")
 		}
-
+		tx.Exec("INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2) ON CONFLICT (f_slug,u_nickname) DO NOTHING ", forumSlug, value.Author)
 		currentPosts = append(currentPosts, value)
 	}
 	tx.Commit()
-
-	txFU , err := Thread.dbLauncher.Begin()
-
-	if err != nil {
-		fmt.Println("[DEBUG] TXFU CREATING ERROR AT CreatePost", err)
-		return nil, err
-	}
-
-	for _, value := range posts {
-		txFU.Exec("INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2) ON CONFLICT (f_slug,u_nickname) DO NOTHING ", forumSlug, value.Author)
-	}
-
-	txFU.Commit()
 
 	Thread.dbLauncher.Exec("UPDATE forums SET message_counter = message_counter + $1 WHERE slug = $2", len(posts), forumSlug)
 

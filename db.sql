@@ -75,17 +75,22 @@ CREATE TABLE messages
     t_id       BIGINT             NOT NULL REFERENCES threads ON DELETE CASCADE
 );
 
-CREATE INDEX idx_messages_tidmid ON messages (t_id, m_id);
-CREATE INDEX idx_messages_tid ON messages (t_id);
-CREATE INDEX idx_messages_parent_tree ON messages (t_id,path);
+CREATE INDEX idx_messages_tid_mid ON messages (t_id, m_id);
+CREATE INDEX idx_messages_parent_tree_tid_parent ON messages (t_id,parent);
+CREATE INDEX idx_messages_path_1 ON messages ((path[1]));
+CREATE INDEX idx_messages_path ON messages (path,m_id);
+
 
 CREATE TABLE forumUsers
 (
     f_slug     CITEXT COLLATE "C" NOT NULL REFERENCES forums (slug) ON DELETE CASCADE,
-    u_nickname CITEXT COLLATE "C" NOT NULL REFERENCES users (nickname) ON DELETE CASCADE
+    u_nickname CITEXT COLLATE "C" NOT NULL REFERENCES users (nickname) ON DELETE CASCADE,
+    CONSTRAINT slug_nick UNIQUE(f_slug,u_nickname)
 );
 
-CREATE UNIQUE INDEX idx_forumusers_slugid ON forumUsers (f_slug, u_nickname);
+CREATE INDEX idx_forumusers_slug_nick ON forumUsers (f_slug, u_nickname);
+CREATE INDEX idx_forumusers_nick ON forumUsers (u_nickname);
+
 
 CREATE OR REPLACE FUNCTION updater()
     RETURNS TRIGGER AS

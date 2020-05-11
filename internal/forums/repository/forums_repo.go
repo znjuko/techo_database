@@ -208,20 +208,29 @@ func (Forum ForumRepoRealisation) GetForumUsers(slug string, limit int, since st
 		ranger = ">"
 	}
 
-	selectRow := "SELECT DISTINCT(U.nickname) , U.fullname, U.email , U.about FROM forumUsers FU INNER JOIN Users U ON(U.nickname=FU.u_nickname) WHERE FU.f_slug = $1 "
+	selectRow := "SELECT U.nickname , U.fullname, U.email , U.about FROM forumUsers FU INNER JOIN Users U ON(U.nickname=FU.u_nickname) WHERE FU.f_slug = $1 "
+	selectValues := make([]interface{},0)
 	if since != "" {
 		if limit == 0 {
-			row, err = Forum.database.Query(selectRow+"AND U.nickname "+ranger+" $2 ORDER BY U.nickname "+order, slug, since)
+			selectRow += "AND FU.u_nickname "+ranger+" $2 ORDER BY U.nickname "+order
+			selectValues = append(selectValues , slug, since)
 		} else {
-			row, err = Forum.database.Query(selectRow+" AND U.nickname "+ranger+" $3 ORDER BY U.nickname "+order+" LIMIT $2", slug, limit, since)
+			selectRow += " AND FU.u_nickname "+ranger+" $3 ORDER BY U.nickname "+order+" LIMIT $2"
+			selectValues = append(selectValues ,slug, limit, since)
 		}
 	} else {
 		if limit == 0 {
-			row, err = Forum.database.Query(selectRow+" ORDER BY U.nickname "+order, slug)
+			selectRow += " ORDER BY U.nickname "+order
+			selectValues = append(selectValues , slug)
 		} else {
-			row, err = Forum.database.Query(selectRow+" ORDER BY U.nickname "+order+" LIMIT $2", slug, limit)
+			selectRow += " ORDER BY U.nickname "+order+" LIMIT $2"
+			selectValues = append(selectValues ,slug, limit)
 		}
 	}
+
+	fmt.Println("[DEBUG USER SORT] :",selectRow , selectValues)
+	row, err = Forum.database.Query(selectRow,selectValues...)
+
 
 	if err != nil {
 		fmt.Println("[DEBUG] error at method GetForumUsers (selecting users) :", err)
@@ -249,6 +258,7 @@ func (Forum ForumRepoRealisation) GetForumUsers(slug string, limit int, since st
 		err = frow.Scan(&slug)
 
 		if err != nil {
+			fmt.Println("\n" , err , "\n")
 			return nil, err
 		}
 	}

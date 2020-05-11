@@ -274,22 +274,23 @@ func (Thread ThreadRepoRealisation) GetPostsSorted(slug string, threadId int, li
 	case "parent_tree":
 		sinceHitted := true
 		selectQuery = "SELECT M.m_id , M.date , M.message , M.edit , M.parent , M.u_nickname , M.t_id , M.f_slug FROM messages AS M "
-		whereQuery = "WHERE M.t_id = $1"
+		whereQuery = " WHERE M.path[1] IN (SELECT m_id FROM messages WHERE t_id = $1 AND parent = 0 "
 
-		orderQuery = " ORDER BY M.path[1] " + order + " , M.path  "
+		if order != "DESC" {
+			orderQuery = " ORDER BY M.path , M.m_id  "
+		} else {
+			orderQuery = " ORDER BY M.path[1] " + order + " , M.path , M.m_id  "
+		}
 
 		if limit != 0 {
-			whereQuery += " AND M.path[1] IN (SELECT DISTINCT path[1] FROM messages WHERE t_id = $1 "
-			if since == 0 {
-				whereQuery += "AND parent = 0 "
-			} else {
+			if since != 0 {
 				valueCounter++
 				whereQuery += "AND path[1] " + ranger + "(SELECT path[1] FROM messages WHERE t_id = $1 AND m_id = $2)" + " "
 				selectValues = append(selectValues, since)
 				sinceHitted = false
 			}
 			valueCounter++
-			whereQuery += "ORDER BY path[1] " + order + " LIMIT $" + strconv.Itoa(valueCounter) + ") "
+			whereQuery += "ORDER BY m_id " + order + " LIMIT $" + strconv.Itoa(valueCounter) + ") "
 			selectValues = append(selectValues, limit)
 		}
 
@@ -302,6 +303,7 @@ func (Thread ThreadRepoRealisation) GetPostsSorted(slug string, threadId int, li
 		additionalWhere += " "
 	}
 
+	fmt.Println(sortType, selectValues , selectQuery+whereQuery+additionalWhere+orderQuery+limitQuery)
 	data, err = Thread.dbLauncher.Query(selectQuery+whereQuery+additionalWhere+orderQuery+limitQuery, selectValues...)
 
 	if err != nil {

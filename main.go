@@ -73,7 +73,7 @@ func Logs(next echo.HandlerFunc) echo.HandlerFunc {
 
 		respTime := time.Since(start)
 
-		fmt.Println(respTime.Milliseconds(), rwContext.Request().URL.Path, rwContext.Request().Method, err)
+		fmt.Println("MICRO SEC:" ,respTime.Microseconds(), "\n PATH:" ,rwContext.Request().URL.Path, "\n METHOD:" , rwContext.Request().Method)
 
 		return err
 

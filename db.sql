@@ -50,7 +50,7 @@ CREATE TABLE threads
 
 CREATE INDEX idx_threads_fslugdate ON threads (f_slug,date,t_id,slug,message,title,votes,u_nickname);
 CLUSTER threads USING idx_threads_fslugdate;
-CREATE INDEX idx_threads_slughash ON threads (slug);
+CREATE INDEX idx_threads_slughash ON threads USING hash (slug);
 
 CREATE TABLE voteThreads
 (
@@ -90,7 +90,7 @@ CREATE TABLE forumUsers
 
 CREATE INDEX idx_forumusers_slug_nick ON forumUsers (f_slug, u_nickname);
 CLUSTER forumUsers USING idx_forumusers_slug_nick;
-CREATE INDEX idx_forumusers_nick ON forumUsers (u_nickname);
+
 
 
 CREATE OR REPLACE FUNCTION updater()

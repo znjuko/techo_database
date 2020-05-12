@@ -18,7 +18,8 @@ CREATE TABLE users
     about    TEXT
 );
 
-CREATE INDEX idx_users_nickname ON users(nickname);
+CREATE INDEX idx_users_nickname ON users(nickname,fullname,email,about);
+CLUSTER users USING idx_users_nickname;
 
 CREATE TABLE forums
 (
@@ -47,7 +48,7 @@ CREATE TABLE threads
 );
 
 
-CREATE INDEX idx_threads_fslugdate ON threads (f_slug,date);
+CREATE INDEX idx_threads_fslugdate ON threads (f_slug,date,t_id,slug,message,title,votes,u_nickname);
 CLUSTER threads USING idx_threads_fslugdate;
 CREATE INDEX idx_threads_slughash ON threads (slug);
 

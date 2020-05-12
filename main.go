@@ -22,9 +22,9 @@ import (
 )
 
 const (
-	usernameDB = "postgres"
+	usernameDB = "docker"
 	passwordDB = "docker"
-	nameDB     = "tp_db"
+	nameDB     = "docker"
 )
 
 type RequestHandler struct {
@@ -90,8 +90,8 @@ func main() {
 
 	server := echo.New()
 
-	server.Use(JSONMiddleware)
-	server.Use(Logs)
+	//server.Use(JSONMiddleware)
+	//server.Use(Logs)
 
 	connectString := "user=" + usernameDB + " password=" + passwordDB + " dbname=" + nameDB + " sslmode=disable"
 

@@ -32,7 +32,7 @@ CREATE TABLE forums
 );
 
 
-CREATE INDEX idx_forums_slug ON forums USINNG hash (slug);
+CREATE INDEX idx_forums_slug ON forums USING hash (slug);
 
 
 CREATE TABLE threads

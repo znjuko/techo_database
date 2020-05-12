@@ -2,7 +2,7 @@ FROM golang:1.13 AS build
 
 ADD . /opt/app
 WORKDIR /opt/app
-RUN go build ./main.go
+RUN go build .
 
 FROM ubuntu:20.04
 
@@ -20,7 +20,7 @@ USER postgres
 
 RUN /etc/init.d/postgresql start &&\
     psql --command "CREATE USER docker WITH SUPERUSER PASSWORD 'docker';" &&\
-    createdb -O docker tp_db &&\
+    createdb -O docker docker &&\
     /etc/init.d/postgresql stop
 
 RUN echo "host all  all    0.0.0.0/0  md5" >> /etc/postgresql/$PGVER/main/pg_hba.conf
@@ -33,11 +33,11 @@ VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
 
 USER root
 
-WORKDIR /usr/src/app
+WORKDIR /opt/app/
 
 COPY . .
-COPY --from=build /opt/app/main .
+COPY --from=build /opt/app/main /usr/bin/
 
 EXPOSE 5000
 ENV PGPASSWORD docker
-CMD service postgresql start &&  psql -h localhost -d docker -U docker -p 5432 -a -q -f ./init.sql && ./main
+CMD service postgresql start &&  psql -h localhost -d docker -U docker -p 5432 -a -q -f /opt/db.sql && main

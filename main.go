@@ -67,13 +67,20 @@ func Logs(next echo.HandlerFunc) echo.HandlerFunc {
 
 	return func(rwContext echo.Context) error {
 
-		start := time.Now()
+		var err error
+		if rwContext.Request().Method == "GET" {
+			start := time.Now()
+			err = next(rwContext)
+			respTime := time.Since(start)
+			fmt.Println("MICRO SEC:" ,respTime.Microseconds(), "\n PATH:" ,rwContext.Request().URL.Path, "\n METHOD:" , rwContext.Request().Method)
+		} else {
+			err = next(rwContext)
+		}
 
-		err := next(rwContext)
 
-		respTime := time.Since(start)
 
-		fmt.Println("MICRO SEC:" ,respTime.Microseconds(), "\n PATH:" ,rwContext.Request().URL.Path, "\n METHOD:" , rwContext.Request().Method)
+
+
 
 		return err
 

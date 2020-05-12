@@ -23,7 +23,7 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, forumSlug string
 	tx, err := Thread.dbLauncher.Begin()
 
 	if err != nil {
-		fmt.Println("[DEBUG] TX CREATING ERROR AT CreatePost", err)
+		//fmt.Println("[DEBUG] TX CREATING ERROR AT CreatePost", err)
 		return nil, err
 	}
 
@@ -43,11 +43,11 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, forumSlug string
 
 		if err != nil {
 
-			fmt.Println("[DEBUG] TX CREATING ERROR POST AT CreatePost", err)
+			//fmt.Println("[DEBUG] TX CREATING ERROR POST AT CreatePost", err)
 
 			err := tx.Rollback()
 
-			fmt.Println("[DEBUG] TX ROLLBACK ERROR", err)
+			//fmt.Println("[DEBUG] TX ROLLBACK ERROR", err)
 			return nil, errors.New("no user")
 		}
 
@@ -58,7 +58,7 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, forumSlug string
 	txFU , err := Thread.dbLauncher.Begin()
 
 	if err != nil {
-		fmt.Println("[DEBUG] TXFU CREATING ERROR AT CreatePost", err)
+		//fmt.Println("[DEBUG] TXFU CREATING ERROR AT CreatePost", err)
 		return nil, err
 	}
 
@@ -87,7 +87,7 @@ func (Thread ThreadRepoRealisation) SelectThreadInfo(slug string, id int) (int, 
 	err := row.Scan(&threadId, &forumSlug)
 
 	if err != nil {
-		fmt.Println("[DEBUG] ERROR AT SelectThreadInfo", err)
+		//fmt.Println("[DEBUG] ERROR AT SelectThreadInfo", err)
 		return 0, "", err
 	}
 
@@ -102,7 +102,7 @@ func (Thread ThreadRepoRealisation) GetParent(threadId int, msg models.Message) 
 		err := row.Scan(&msg.Parent, &msg.Path)
 
 		if err != nil {
-			fmt.Println("[DEBUG] error at method CreatePost (getting parent) :", err)
+			//fmt.Println("[DEBUG] error at method CreatePost (getting parent) :", err)
 			return models.Message{}, errors.New("Parent post was created in another thread")
 		}
 
@@ -132,7 +132,7 @@ func (Thread ThreadRepoRealisation) VoteThread(nickname string, voice, threadId 
 	}
 
 	if err != nil {
-		fmt.Println(err)
+		//fmt.Println(err)
 		return thread, err
 	}
 
@@ -156,7 +156,7 @@ func (Thread ThreadRepoRealisation) VoteThread(nickname string, voice, threadId 
 			}
 
 			if err != nil {
-				fmt.Println("[DEBUG] error at method VoteThread (voting from err) :", err)
+				//fmt.Println("[DEBUG] error at method VoteThread (voting from err) :", err)
 				return thread, err
 			}
 
@@ -179,7 +179,7 @@ func (Thread ThreadRepoRealisation) VoteThread(nickname string, voice, threadId 
 			}
 
 			if err != nil {
-				fmt.Println("[DEBUG] error at method VoteThread (voting from err) :", err)
+				//fmt.Println("[DEBUG] error at method VoteThread (voting from err) :", err)
 				return thread, err
 			}
 
@@ -311,7 +311,7 @@ func (Thread ThreadRepoRealisation) GetPostsSorted(slug string, threadId int, li
 		additionalWhere += " "
 	}
 
-	fmt.Println(sortType, selectValues , selectQuery+whereQuery+additionalWhere+orderQuery+limitQuery)
+	//fmt.Println(sortType, selectValues , selectQuery+whereQuery+additionalWhere+orderQuery+limitQuery)
 	data, err = Thread.dbLauncher.Query(selectQuery+whereQuery+additionalWhere+orderQuery+limitQuery, selectValues...)
 
 	if err != nil {
@@ -325,7 +325,7 @@ func (Thread ThreadRepoRealisation) GetPostsSorted(slug string, threadId int, li
 			err = data.Scan(&msg.Id, &msg.Created, &msg.Message, &msg.IsEdited, &msg.Parent, &msg.Author, &msg.Thread, &msg.Forum)
 
 			if err != nil {
-				fmt.Println(err)
+				//fmt.Println(err)
 			}
 
 			messages = append(messages, *msg)
@@ -341,7 +341,7 @@ func (Thread ThreadRepoRealisation) GetPostsSorted(slug string, threadId int, li
 		var threadSlug *string
 
 		if err = trow.Scan(&threadId, &threadSlug); err != nil {
-			fmt.Println(err)
+			//fmt.Println(err)
 			return nil, err
 		}
 	}
@@ -381,9 +381,9 @@ func (Thread ThreadRepoRealisation) UpdateThread(slug string, threadId int, newT
 
 		threadRow.Next()
 		err = threadRow.Scan(&newThread.Id, &newThread.Slug, &newThread.Author, &newThread.Forum, &newThread.Created, &newThread.Message, &newThread.Title, &newThread.Votes)
-		if err != nil {
-			fmt.Println(err)
-		}
+		//if err != nil {
+		//	fmt.Println(err)
+		//}
 		threadRow.Close()
 
 		return newThread, err

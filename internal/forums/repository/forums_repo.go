@@ -2,7 +2,6 @@ package repository
 
 import (
 	"errors"
-	"fmt"
 	"github.com/jackc/pgx"
 	"main/internal/models"
 	"strconv"
@@ -26,7 +25,7 @@ func (Forum ForumRepoRealisation) CreateNewForum(forum models.Forum) (models.For
 	err := row.Scan(&userId, &forum.User)
 
 	if err != nil {
-		fmt.Println("[DEBUG] error at method CreateNewForum (scan of existing user) :", err)
+		//fmt.Println("[DEBUG] error at method CreateNewForum (scan of existing user) :", err)
 		return forum, err
 	}
 
@@ -50,7 +49,7 @@ func (Forum ForumRepoRealisation) GetForum(slug string) (models.Forum, error) {
 	err := row.Scan(&forumData.Slug, &forumData.Title, &forumData.User, &forumData.Posts, &forumData.Threads)
 
 	if err != nil {
-		fmt.Println("[DEBUG] error at method GetForum (scan of forum basic data) :", err)
+		//fmt.Println("[DEBUG] error at method GetForum (scan of forum basic data) :", err)
 		return *forumData, err
 	}
 
@@ -73,7 +72,7 @@ func (Forum ForumRepoRealisation) CreateThread(thread models.Thread) (models.Thr
 	err := row.Scan(&userId, &thread.Author)
 
 	if err != nil {
-		fmt.Println("[DEBUG] error at method CreateThread (scan of existing user) :", err)
+		//fmt.Println("[DEBUG] error at method CreateThread (scan of existing user) :", err)
 		return thread, err
 	}
 
@@ -82,7 +81,7 @@ func (Forum ForumRepoRealisation) CreateThread(thread models.Thread) (models.Thr
 	err = row.Scan(&thread.Forum)
 
 	if err != nil {
-		fmt.Println("[DEBUG] error at method CreateThread (scan of existing forum) :", err)
+		//fmt.Println("[DEBUG] error at method CreateThread (scan of existing forum) :", err)
 		return thread, err
 	}
 
@@ -116,23 +115,23 @@ func (Forum ForumRepoRealisation) CreateThread(thread models.Thread) (models.Thr
 	}
 
 	if err != nil {
-		fmt.Println("[DEBUG] error at method CreateThread (creating new forum) :", err)
+		//fmt.Println("[DEBUG] error at method CreateThread (creating new forum) :", err)
 		row = Forum.database.QueryRow("SELECT u_nickname , date ,f_slug , t_id , message , slug , title , votes FROM threads WHERE slug = $1", thread.Slug)
 		err = row.Scan(&thread.Author, &thread.Created, &thread.Forum, &thread.Id, &thread.Message, &thread.Slug, &thread.Title, &thread.Votes)
 		return thread, errors.New("thread already exist")
 	}
 
-	_, err = Forum.database.Exec("INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2)", thread.Forum, thread.Author)
+	Forum.database.Exec("INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2)", thread.Forum, thread.Author)
 
-	if err != nil {
-		fmt.Println("\n", err, "\n")
-	}
+	//if err != nil {
+	//	//fmt.Println("\n", err, "\n")
+	//}
 
-	_, err = Forum.database.Exec("UPDATE forums SET thread_counter = thread_counter +1 WHERE slug = $1", thread.Forum)
+	Forum.database.Exec("UPDATE forums SET thread_counter = thread_counter +1 WHERE slug = $1", thread.Forum)
 
-	if err != nil {
-		fmt.Println("\n", err, "\n")
-	}
+	//if err != nil {
+	//	fmt.Println("\n", err, "\n")
+	//}
 
 	return thread, nil
 }
@@ -158,7 +157,7 @@ func (Forum ForumRepoRealisation) GetThreads(forum models.Forum, limit int, sinc
 	}
 
 	if err != nil {
-		fmt.Println("[DEBUG] error at method GetThreads (scanning slug of a forum) :", err)
+		//fmt.Println("[DEBUG] error at method GetThreads (scanning slug of a forum) :", err)
 		return nil, err
 	}
 
@@ -176,7 +175,7 @@ func (Forum ForumRepoRealisation) GetThreads(forum models.Forum, limit int, sinc
 			}
 
 			if err != nil {
-				fmt.Println("[DEBUG] error at method GetThreads (scanning slug of a forum) :", err)
+				//fmt.Println("[DEBUG] error at method GetThreads (scanning slug of a forum) :", err)
 				return nil, err
 			}
 
@@ -228,12 +227,12 @@ func (Forum ForumRepoRealisation) GetForumUsers(slug string, limit int, since st
 		}
 	}
 
-	fmt.Println("[DEBUG USER SORT] :",selectRow , selectValues)
+	//fmt.Println("[DEBUG USER SORT] :",selectRow , selectValues)
 	row, err = Forum.database.Query(selectRow,selectValues...)
 
 
 	if err != nil {
-		fmt.Println("[DEBUG] error at method GetForumUsers (selecting users) :", err)
+		//fmt.Println("[DEBUG] error at method GetForumUsers (selecting users) :", err)
 		return nil, err
 	}
 
@@ -243,7 +242,7 @@ func (Forum ForumRepoRealisation) GetForumUsers(slug string, limit int, since st
 			err = row.Scan(&user.Nickname, &user.Fullname, &user.Email, &user.About)
 
 			if err != nil {
-				fmt.Println("[DEBUG] error at method GetForumUsers (selecting users) :", err)
+				//fmt.Println("[DEBUG] error at method GetForumUsers (selecting users) :", err)
 				return nil, err
 			}
 
@@ -258,7 +257,7 @@ func (Forum ForumRepoRealisation) GetForumUsers(slug string, limit int, since st
 		err = frow.Scan(&slug)
 
 		if err != nil {
-			fmt.Println("\n" , err , "\n")
+			//fmt.Println("\n" , err , "\n")
 			return nil, err
 		}
 	}

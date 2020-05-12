@@ -25,7 +25,7 @@ func (UserData UserRepoRealisation) CreateNewUser(userModel models.UserModel) ([
 	_, err = UserData.database.Exec("INSERT INTO users (nickname , fullname , email , about) VALUES($1 , $2 , $3 ,$4)", userModel.Nickname, userModel.Fullname, userModel.Email, userModel.About)
 
 	if err != nil {
-		fmt.Println(err)
+		//fmt.Println(err)
 		row, err := UserData.database.Query("SELECT nickname , fullname , email , about FROM users WHERE nickname = $1 OR email = $2", userModel.Nickname, userModel.Email)
 
 		if row != nil {

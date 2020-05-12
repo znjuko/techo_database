@@ -9,7 +9,7 @@ CREATE EXTENSION IF NOT EXISTS CITEXT;
 DROP TRIGGER IF EXISTS path_updater ON messages;
 DROP FUNCTION IF EXISTS updater;
 
-CREATE TABLE users
+CREATE UNLOGGED TABLE users
 (
     u_id     BIGSERIAL PRIMARY KEY,
     nickname CITEXT COLLATE "C" UNIQUE,
@@ -21,7 +21,7 @@ CREATE TABLE users
 CREATE INDEX idx_users_nickname ON users(nickname,fullname,email,about);
 CLUSTER users USING idx_users_nickname;
 
-CREATE TABLE forums
+CREATE UNLOGGED TABLE forums
 (
     f_id            BIGSERIAL PRIMARY KEY,
     slug            CITEXT UNIQUE NOT NULL,
@@ -36,7 +36,7 @@ CREATE INDEX idx_forums_slug ON forums USING btree (slug);
 CLUSTER forums USING idx_forums_slug;
 
 
-CREATE TABLE threads
+CREATE UNLOGGED TABLE threads
 (
     t_id       BIGSERIAL PRIMARY KEY,
     slug       CITEXT UNIQUE,
@@ -54,7 +54,7 @@ CLUSTER threads USING idx_threads_fslugdate;
 CREATE INDEX idx_threads_slugtid ON threads (slug,t_id);
 CREATE INDEX idx_threads_tidslug ON threads (t_id,slug);
 
-CREATE TABLE voteThreads
+CREATE UNLOGGED TABLE voteThreads
 (
     vt_id      BIGSERIAL,
     t_id       BIGINT             NOT NULL REFERENCES threads ON DELETE CASCADE,
@@ -64,7 +64,7 @@ CREATE TABLE voteThreads
 
 CREATE UNIQUE INDEX idx_voteth_thrnick ON voteThreads USING btree (t_id, u_nickname);
 
-CREATE TABLE messages
+CREATE UNLOGGED TABLE messages
 (
     m_id       BIGSERIAL PRIMARY KEY,
     date       TIMESTAMP WITH TIME ZONE,
@@ -80,10 +80,10 @@ CREATE TABLE messages
 CREATE INDEX idx_messages_tid_mid ON messages (t_id, m_id);
 CREATE INDEX idx_messages_parent_tree_tid_parent ON messages (parent,t_id,m_id,(path[1]));
 CLUSTER messages USING idx_messages_parent_tree_tid_parent;
-CREATE INDEX idx_messages_path_1 ON messages ((path[1]));
+CREATE INDEX idx_messages_path_1 ON messages USING gin ((path[1]));
 CREATE INDEX idx_messages_path ON messages (path,m_id);
 
-CREATE TABLE forumUsers
+CREATE UNLOGGED TABLE forumUsers
 (
     f_slug     CITEXT COLLATE "C" NOT NULL REFERENCES forums (slug) ON DELETE CASCADE,
     u_nickname CITEXT COLLATE "C" NOT NULL REFERENCES users (nickname) ON DELETE CASCADE,

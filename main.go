@@ -76,6 +76,7 @@ func Logs(next echo.HandlerFunc) echo.HandlerFunc {
 			if respTime.Milliseconds() >= 400 {
 				fmt.Println(rwContext.QueryParam("sort"))
 			}
+
 		} else {
 			err = next(rwContext)
 		}

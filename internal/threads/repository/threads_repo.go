@@ -2,7 +2,6 @@ package repository
 
 import (
 	"errors"
-	"fmt"
 	"github.com/jackc/pgx"
 	"main/internal/models"
 	"strconv"
@@ -45,7 +44,7 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, forumSlug string
 
 			//fmt.Println("[DEBUG] TX CREATING ERROR POST AT CreatePost", err)
 
-			err := tx.Rollback()
+			tx.Rollback()
 
 			//fmt.Println("[DEBUG] TX ROLLBACK ERROR", err)
 			return nil, errors.New("no user")
@@ -55,7 +54,7 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, forumSlug string
 	}
 	tx.Commit()
 
-	txFU , err := Thread.dbLauncher.Begin()
+	txFU, err := Thread.dbLauncher.Begin()
 
 	if err != nil {
 		//fmt.Println("[DEBUG] TXFU CREATING ERROR AT CreatePost", err)

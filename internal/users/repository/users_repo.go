@@ -2,7 +2,6 @@ package repository
 
 import (
 	"errors"
-	"fmt"
 	"github.com/jackc/pgx"
 	_ "github.com/lib/pq"
 	"main/internal/models"

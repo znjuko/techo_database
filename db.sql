@@ -48,6 +48,8 @@ CREATE TABLE threads
 
 
 CREATE INDEX idx_threads_fslug ON threads (f_slug);
+CREATE INDEX idx_threads_fslugdate ON threads (date,f_slug);
+CLUSTER threads USING idx_threads_fslugdate;
 CREATE INDEX idx_threads_slughash ON threads (slug);
 
 CREATE TABLE voteThreads
@@ -75,6 +77,7 @@ CREATE TABLE messages
 
 CREATE INDEX idx_messages_tid_mid ON messages (t_id, m_id);
 CREATE INDEX idx_messages_parent_tree_tid_parent ON messages (t_id,parent);
+CLUSTER messages USING idx_messages_parent_tree_tid_parent;
 CREATE INDEX idx_messages_path_1 ON messages ((path[1]));
 CREATE INDEX idx_messages_path ON messages (path,m_id);
 

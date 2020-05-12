@@ -207,22 +207,22 @@ func (Forum ForumRepoRealisation) GetForumUsers(slug string, limit int, since st
 		ranger = ">"
 	}
 
-	selectRow := "SELECT U.nickname , U.fullname, U.email , U.about FROM forumUsers FU INNER JOIN Users U ON(U.nickname=FU.u_nickname) WHERE FU.f_slug = $1 "
+	selectRow := "SELECT U.nickname , U.fullname, U.email , U.about FROM forumUsers FU INNER JOIN Users U ON(FU.u_nickname=U.nickname) WHERE FU.f_slug = $1 "
 	selectValues := make([]interface{}, 0)
 	if since != "" {
 		if limit == 0 {
-			selectRow += "AND FU.u_nickname " + ranger + " $2 ORDER BY U.nickname " + order
+			selectRow += "AND FU.u_nickname " + ranger + " $2 ORDER BY FU.u_nickname " + order
 			selectValues = append(selectValues, slug, since)
 		} else {
-			selectRow += " AND FU.u_nickname " + ranger + " $3 ORDER BY U.nickname " + order + " LIMIT $2"
+			selectRow += " AND FU.u_nickname " + ranger + " $3 ORDER BY FU.u_nickname " + order + " LIMIT $2"
 			selectValues = append(selectValues, slug, limit, since)
 		}
 	} else {
 		if limit == 0 {
-			selectRow += " ORDER BY U.nickname " + order
+			selectRow += " ORDER BY FU.u_nickname " + order
 			selectValues = append(selectValues, slug)
 		} else {
-			selectRow += " ORDER BY U.nickname " + order + " LIMIT $2"
+			selectRow += " ORDER BY FU.u_nickname " + order + " LIMIT $2"
 			selectValues = append(selectValues, slug, limit)
 		}
 	}

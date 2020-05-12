@@ -2,39 +2,42 @@ FROM golang:1.13 AS build
 
 ADD . /opt/app
 WORKDIR /opt/app
-RUN go build .
+RUN go build ./main.go
 
+FROM ubuntu:20.04
 
-FROM ubuntu:18.04 AS release
+MAINTAINER Howle
 
-ENV PGVER 10
-RUN apt -y update && apt install -y postgresql-$PGVER
+RUN apt-get -y update && apt-get install -y tzdata
+
+ENV TZ=Russia/Moscow
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+ENV PGVER 12
+RUN apt-get install -y postgresql-$PGVER
 
 USER postgres
 
-ADD ./db.sql /opt/db.sql
 RUN /etc/init.d/postgresql start &&\
-psql --command "CREATE USER docker WITH SUPERUSER PASSWORD 'docker';" &&\
-createdb -O docker docker &&\
-psql -f /opt/db.sql -d docker &&\
-/etc/init.d/postgresql stop
-ENV POSTGRES_DSN=postgres://docker:docker@localhost/docker
-
+    psql --command "CREATE USER postgres WITH SUPERUSER PASSWORD 'postgres';" &&\
+    createdb -O tp_db forum &&\
+    /etc/init.d/postgresql stop
 
 RUN echo "host all  all    0.0.0.0/0  md5" >> /etc/postgresql/$PGVER/main/pg_hba.conf
-RUN echo "listen_addresses='*'" >> /etc/postgresql/$PGVER/main/postgresql.conf
 
-RUN echo "synchronous_commit='off'" >> /etc/postgresql/$PGVER/main/postgresql.conf
-RUN echo "fsync = 'off'" >> /etc/postgresql/$PGVER/main/postgresql.conf
+RUN echo "listen_addresses='*'" >> /etc/postgresql/$PGVER/main/postgresql.conf
 
 EXPOSE 5432
 
-VOLUME ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
+VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
 
 USER root
 
+WORKDIR /usr/src/app
+
+COPY . .
+COPY --from=build /opt/app/main .
+
 EXPOSE 5000
-
-COPY --from=build /opt/app/main /usr/bin/
-
-CMD service postgresql start && main
+ENV PGPASSWORD postgres
+CMD service postgresql start &&  psql -h localhost -d tp_db -U postgres -p 5432 -a -q -f ./init.sql && ./main

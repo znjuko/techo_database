@@ -93,19 +93,37 @@ func (Thread ThreadRepoRealisation) SelectThreadInfo(slug string, id int) (int, 
 	return threadId, forumSlug, nil
 }
 
-func (Thread ThreadRepoRealisation) GetParent(threadId int, msg models.Message) (models.Message, error) {
+func (Thread ThreadRepoRealisation) GetParent(threadId int, msg []models.Message) ([]models.Message, error) {
 
-	if msg.Parent != 0 {
-		//parentPath := make([]uint8, 0)
-		row := Thread.dbLauncher.QueryRow("SELECT m_id , path FROM messages WHERE t_id = $2 AND m_id = $1 ", msg.Parent, threadId)
-		err := row.Scan(&msg.Parent, &msg.Path)
+	tx, err := Thread.dbLauncher.Begin()
 
+	defer func () {
 		if err != nil {
-			//fmt.Println("[DEBUG] error at method CreatePost (getting parent) :", err)
-			return models.Message{}, errors.New("Parent post was created in another thread")
+			tx.Rollback()
+		} else {
+			tx.Commit()
 		}
+	} ()
 
+	if err != nil {
+		//fmt.Println("[DEBUG] TX CREATING ERROR AT CreatePost", err)
+		return nil, err
 	}
+
+	for iter , _ := range msg {
+		if msg[iter].Parent != 0 {
+			//parentPath := make([]uint8, 0)
+			row := tx.QueryRow("SELECT m_id , path FROM messages WHERE t_id = $2 AND m_id = $1 ", msg[iter].Parent, threadId)
+			err = row.Scan(&msg[iter].Parent, &msg[iter].Path)
+
+			if err != nil {
+				//fmt.Println("[DEBUG] error at method CreatePost (getting parent) :", err)
+				return nil, errors.New("Parent post was created in another thread")
+			}
+
+		}
+	}
+
 
 	return msg, nil
 }
@@ -117,10 +135,20 @@ func (Thread ThreadRepoRealisation) VoteThread(nickname string, voice, threadId 
 
 	voterNick := ""
 
+	tx, err := Thread.dbLauncher.Begin()
+
+	defer func () {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	} ()
+
 	if thread.Slug != "" {
-		row = Thread.dbLauncher.QueryRow("SELECT t_id , slug , u_nickname , f_slug , date , message , title , votes FROM threads WHERE slug = $1", thread.Slug)
+		row = tx.QueryRow("SELECT t_id , slug , u_nickname , f_slug , date , message , title , votes FROM threads WHERE slug = $1", thread.Slug)
 	} else {
-		row = Thread.dbLauncher.QueryRow("SELECT t_id , slug , u_nickname , f_slug , date , message , title , votes FROM threads WHERE t_id = $1", threadId)
+		row = tx.QueryRow("SELECT t_id , slug , u_nickname , f_slug , date , message , title , votes FROM threads WHERE t_id = $1", threadId)
 	}
 
 	var forumSlug *string
@@ -136,7 +164,7 @@ func (Thread ThreadRepoRealisation) VoteThread(nickname string, voice, threadId 
 	}
 
 	voted := 0
-	row = Thread.dbLauncher.QueryRow("SELECT counter , u_nickname FROM voteThreads WHERE t_id = $1 AND u_nickname = $2", thread.Id, nickname)
+	row = tx.QueryRow("SELECT counter , u_nickname FROM voteThreads WHERE t_id = $1 AND u_nickname = $2", thread.Id, nickname)
 	row.Scan(&voted, &voterNick)
 
 	if voice > 0 {
@@ -146,11 +174,11 @@ func (Thread ThreadRepoRealisation) VoteThread(nickname string, voice, threadId 
 			voteCounter := 1
 
 			if voted == 0 {
-				_, err = Thread.dbLauncher.Exec("INSERT INTO voteThreads (t_id , u_nickname, counter) VALUES ($1,$2,$3)", thread.Id, nickname, 1)
+				_, err = tx.Exec("INSERT INTO voteThreads (t_id , u_nickname, counter) VALUES ($1,$2,$3)", thread.Id, nickname, 1)
 				voteCounter = 1
 
 			} else {
-				_, err = Thread.dbLauncher.Exec("UPDATE voteThreads SET counter = $3 WHERE t_id = $1 AND u_nickname = $2", thread.Id, voterNick, 1)
+				_, err = tx.Exec("UPDATE voteThreads SET counter = $3 WHERE t_id = $1 AND u_nickname = $2", thread.Id, voterNick, 1)
 				voteCounter = 2
 			}
 
@@ -159,7 +187,7 @@ func (Thread ThreadRepoRealisation) VoteThread(nickname string, voice, threadId 
 				return thread, err
 			}
 
-			row = Thread.dbLauncher.QueryRow("UPDATE threads SET votes = votes + $2 WHERE t_id = $1 RETURNING votes", thread.Id, voteCounter)
+			row = tx.QueryRow("UPDATE threads SET votes = votes + $2 WHERE t_id = $1 RETURNING votes", thread.Id, voteCounter)
 			err = row.Scan(&thread.Votes)
 
 		}
@@ -169,11 +197,11 @@ func (Thread ThreadRepoRealisation) VoteThread(nickname string, voice, threadId 
 			voteCounter := 0
 
 			if voted == 0 {
-				_, err = Thread.dbLauncher.Exec("INSERT INTO voteThreads (t_id , u_nickname, counter) VALUES ($1,$2,$3)", thread.Id, nickname, -1)
+				_, err = tx.Exec("INSERT INTO voteThreads (t_id , u_nickname, counter) VALUES ($1,$2,$3)", thread.Id, nickname, -1)
 				voteCounter = 1
 
 			} else {
-				_, err = Thread.dbLauncher.Exec("UPDATE voteThreads SET counter = $3 WHERE t_id = $1 AND u_nickname = $2", thread.Id, voterNick, -1)
+				_, err = tx.Exec("UPDATE voteThreads SET counter = $3 WHERE t_id = $1 AND u_nickname = $2", thread.Id, voterNick, -1)
 				voteCounter = 2
 			}
 
@@ -182,7 +210,7 @@ func (Thread ThreadRepoRealisation) VoteThread(nickname string, voice, threadId 
 				return thread, err
 			}
 
-			row = Thread.dbLauncher.QueryRow("UPDATE threads SET votes = votes - $2 WHERE t_id = $1 RETURNING votes", thread.Id, voteCounter)
+			row = tx.QueryRow("UPDATE threads SET votes = votes - $2 WHERE t_id = $1 RETURNING votes", thread.Id, voteCounter)
 			err = row.Scan(&thread.Votes)
 
 		}

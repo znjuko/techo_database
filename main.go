@@ -24,7 +24,7 @@ import (
 const (
 	usernameDB = "docker"
 	passwordDB = "docker"
-	nameDB     = "docker"
+	nameDB     = "tp_db"
 )
 
 type RequestHandler struct {

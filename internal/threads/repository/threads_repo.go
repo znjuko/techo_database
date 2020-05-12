@@ -26,7 +26,7 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, forumSlug string
 		return nil, err
 	}
 
-	for iter, value := range posts {
+	for _, value := range posts {
 
 		value.Thread = threadId
 		value.Forum = forumSlug
@@ -34,28 +34,15 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, forumSlug string
 
 		var err error
 		if value.Parent != 0 {
-
-			row := tx.QueryRow("SELECT m_id , path FROM messages WHERE t_id = $2 AND m_id = $1 ", posts[iter].Parent, threadId)
-			err = row.Scan(&posts[iter].Parent, &posts[iter].Path)
-
-			if err != nil {
-				tx.Rollback()
-				return nil, errors.New("Parent post was created in another thread")
-			}
-
 			err = tx.QueryRow("INSERT INTO messages (date , message , parent , path , u_nickname , f_slug , t_id) VALUES ($1 , $2 , $3 , $7::BIGINT[] , $4 , $5 , $6) RETURNING date , m_id", timer, value.Message, value.Parent, value.Author, forumSlug, threadId, value.Path).Scan(&value.Created, &value.Id)
 		} else {
-			//"INSERT INTO messages (date , message , parent , path , u_nickname , f_slug , t_id) VALUES ($1 , $2 , $3 , ARRAY[]::BIGINT[] , $4 , $5 , $6
 			err = tx.QueryRow("INSERT INTO messages (date , message , parent , path , u_nickname , f_slug , t_id) VALUES ($1 , $2 , $3 , ARRAY[]::BIGINT[] , $4 , $5 , $6) RETURNING date , m_id", timer, value.Message, value.Parent, value.Author, forumSlug, threadId).Scan(&value.Created, &value.Id)
 		}
 
 		if err != nil {
 
-			//fmt.Println("[DEBUG] TX CREATING ERROR POST AT CreatePost", err)
-
 			tx.Rollback()
 
-			//fmt.Println("[DEBUG] TX ROLLBACK ERROR", err)
 			return nil, errors.New("no user")
 		}
 
@@ -106,20 +93,20 @@ func (Thread ThreadRepoRealisation) GetParent(threadId int, msg []models.Message
 
 	tx, err := Thread.dbLauncher.Begin()
 
-	defer func () {
+	defer func() {
 		if err != nil {
 			tx.Rollback()
 		} else {
 			tx.Commit()
 		}
-	} ()
+	}()
 
 	if err != nil {
 		//fmt.Println("[DEBUG] TX CREATING ERROR AT CreatePost", err)
 		return nil, err
 	}
 
-	for iter , _ := range msg {
+	for iter, _ := range msg {
 		if msg[iter].Parent != 0 {
 			//parentPath := make([]uint8, 0)
 			row := tx.QueryRow("SELECT m_id , path FROM messages WHERE t_id = $2 AND m_id = $1 ", msg[iter].Parent, threadId)
@@ -133,7 +120,6 @@ func (Thread ThreadRepoRealisation) GetParent(threadId int, msg []models.Message
 		}
 	}
 
-
 	return msg, nil
 }
 
@@ -146,13 +132,13 @@ func (Thread ThreadRepoRealisation) VoteThread(nickname string, voice, threadId 
 
 	tx, err := Thread.dbLauncher.Begin()
 
-	defer func () {
+	defer func() {
 		if err != nil {
 			tx.Rollback()
 		} else {
 			tx.Commit()
 		}
-	} ()
+	}()
 
 	if thread.Slug != "" {
 		row = tx.QueryRow("SELECT t_id , slug , u_nickname , f_slug , date , message , title , votes FROM threads WHERE slug = $1", thread.Slug)

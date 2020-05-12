@@ -32,7 +32,8 @@ CREATE TABLE forums
 );
 
 
-CREATE INDEX idx_forums_slug ON forums USING hash (slug);
+CREATE INDEX idx_forums_slug ON forums USING btree (slug);
+CLUSTER forums USING idx_forums_slug;
 
 
 CREATE TABLE threads

@@ -50,7 +50,8 @@ CREATE TABLE threads
 
 CREATE INDEX idx_threads_fslugdate ON threads (f_slug,date,t_id,slug,message,title,votes,u_nickname);
 CLUSTER threads USING idx_threads_fslugdate;
-CREATE INDEX idx_threads_slughash ON threads USING hash (slug);
+CREATE INDEX idx_threads_slugtid ON threads (slug,t_id);
+CREATE INDEX idx_threads_tidslug ON threads (t_id,slug);
 
 CREATE TABLE voteThreads
 (

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"errors"
+	"fmt"
 	"github.com/jackc/pgx"
 	"main/internal/models"
 	"strconv"
@@ -150,8 +151,8 @@ func (Forum ForumRepoRealisation) GetThreads(forum models.Forum, limit int, sinc
 	var rowThreads *pgx.Rows
 	selectRow := "SELECT t_id , date , message , title , votes , slug , f_slug , u_nickname FROM threads T "
 	if since != "" {
-		sinceStatus := "WHERE date" + sorter + "=$2" + " "
-		rowThreads, err = Forum.database.Query(selectRow+sinceStatus+"AND f_slug = $3 ORDER BY date "+orderStatus+" LIMIT $1", limit, since, forum.Slug)
+		sinceStatus := "WHERE f_slug = $3 AND date" + sorter + "=$2" + " "
+		rowThreads, err = Forum.database.Query(selectRow+sinceStatus+" ORDER BY date "+orderStatus+" LIMIT $1", limit, since, forum.Slug)
 	} else {
 		rowThreads, err = Forum.database.Query(selectRow+"WHERE f_slug = $2 "+"ORDER BY date "+orderStatus+" LIMIT $1", limit, forum.Slug)
 	}
@@ -227,7 +228,15 @@ func (Forum ForumRepoRealisation) GetForumUsers(slug string, limit int, since st
 		}
 	}
 
-	//fmt.Println("[DEBUG USER SORT] :",selectRow , selectValues)
+	var explain *string
+	fmt.Println(selectRow, selectValues)
+	errExplain ,_ := Forum.database.Query("EXPLAIN ANALYZE "+selectRow, selectValues...)
+	fmt.Print("[DEBUG EXPLAIN] explain :")
+	for errExplain.Next() {
+		errExplain.Scan(&explain)
+		fmt.Println(*explain)
+	}
+	errExplain.Close()
 	row, err = Forum.database.Query(selectRow, selectValues...)
 
 	if err != nil {

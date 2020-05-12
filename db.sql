@@ -47,8 +47,7 @@ CREATE TABLE threads
 );
 
 
-CREATE INDEX idx_threads_fslug ON threads (f_slug);
-CREATE INDEX idx_threads_fslugdate ON threads (date,f_slug);
+CREATE INDEX idx_threads_fslugdate ON threads (f_slug,date);
 CLUSTER threads USING idx_threads_fslugdate;
 CREATE INDEX idx_threads_slughash ON threads (slug);
 
@@ -81,7 +80,6 @@ CLUSTER messages USING idx_messages_parent_tree_tid_parent;
 CREATE INDEX idx_messages_path_1 ON messages ((path[1]));
 CREATE INDEX idx_messages_path ON messages (path,m_id);
 
-
 CREATE TABLE forumUsers
 (
     f_slug     CITEXT COLLATE "C" NOT NULL REFERENCES forums (slug) ON DELETE CASCADE,
@@ -90,6 +88,7 @@ CREATE TABLE forumUsers
 );
 
 CREATE INDEX idx_forumusers_slug_nick ON forumUsers (f_slug, u_nickname);
+CLUSTER forumUsers USING idx_forumusers_slug_nick;
 CREATE INDEX idx_forumusers_nick ON forumUsers (u_nickname);
 
 

@@ -32,7 +32,7 @@ CREATE UNLOGGED TABLE forums
 );
 
 
-CREATE INDEX idx_forums_slug ON forums USING btree (slug);
+CREATE INDEX idx_forums_slug ON forums(slug);
 CLUSTER forums USING idx_forums_slug;
 
 
@@ -49,10 +49,10 @@ CREATE UNLOGGED TABLE threads
 );
 
 
-CREATE INDEX idx_threads_fslugdate ON threads (f_slug,date,t_id,slug,message,title,votes,u_nickname);
+CREATE INDEX idx_threads_fslugdate ON threads(f_slug,date,t_id,slug,message,title,votes,u_nickname);
 CLUSTER threads USING idx_threads_fslugdate;
-CREATE INDEX idx_threads_slugtid ON threads (slug,t_id);
-CREATE INDEX idx_threads_tidslug ON threads (t_id,slug);
+CREATE INDEX idx_threads_slugtid ON threads(slug,t_id);
+CREATE INDEX idx_threads_tidslug ON threads(t_id,slug);
 
 CREATE UNLOGGED TABLE voteThreads
 (
@@ -62,7 +62,7 @@ CREATE UNLOGGED TABLE voteThreads
     u_nickname CITEXT COLLATE "C" NOT NULL REFERENCES users (nickname) ON DELETE CASCADE
 );
 
-CREATE UNIQUE INDEX idx_voteth_thrnick ON voteThreads USING btree (t_id, u_nickname);
+CREATE UNIQUE INDEX idx_voteth_thrnick ON voteThreads(t_id, u_nickname);
 
 CREATE UNLOGGED TABLE messages
 (
@@ -80,7 +80,7 @@ CREATE UNLOGGED TABLE messages
 CREATE INDEX idx_messages_tid_mid ON messages (t_id, m_id);
 CREATE INDEX idx_messages_parent_tree_tid_parent ON messages (parent,t_id,m_id,(path[1]));
 CLUSTER messages USING idx_messages_parent_tree_tid_parent;
-CREATE INDEX idx_messages_path_1 ON messages USING gin ((path[1]));
+CREATE INDEX idx_messages_path_1 ON messages((path[1]));
 CREATE INDEX idx_messages_path ON messages (path,m_id);
 
 CREATE UNLOGGED TABLE forumUsers

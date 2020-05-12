@@ -19,7 +19,7 @@ RUN apt-get install -y postgresql-$PGVER
 USER postgres
 
 RUN /etc/init.d/postgresql start &&\
-    psql --command "CREATE USER postgres WITH SUPERUSER PASSWORD 'postgres';" &&\
+    psql --command "CREATE USER docker WITH SUPERUSER PASSWORD 'docker';" &&\
     createdb -O tp_db forum &&\
     /etc/init.d/postgresql stop
 
@@ -39,5 +39,5 @@ COPY . .
 COPY --from=build /opt/app/main .
 
 EXPOSE 5000
-ENV PGPASSWORD postgres
-CMD service postgresql start &&  psql -h localhost -d tp_db -U postgres -p 5432 -a -q -f ./init.sql && ./main
+ENV PGPASSWORD docker
+CMD service postgresql start &&  psql -h localhost -d docker -U docker -p 5432 -a -q -f ./init.sql && ./main

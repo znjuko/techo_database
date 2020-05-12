@@ -76,7 +76,7 @@ CREATE TABLE messages
 );
 
 CREATE INDEX idx_messages_tid_mid ON messages (t_id, m_id);
-CREATE INDEX idx_messages_parent_tree_tid_parent ON messages (t_id,parent);
+CREATE INDEX idx_messages_parent_tree_tid_parent ON messages (parent,t_id,m_id,(path[1]));
 CLUSTER messages USING idx_messages_parent_tree_tid_parent;
 CREATE INDEX idx_messages_path_1 ON messages ((path[1]));
 CREATE INDEX idx_messages_path ON messages (path,m_id);

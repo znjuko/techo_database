@@ -281,7 +281,7 @@ func (Thread ThreadRepoRealisation) GetPostsSorted(slug string, threadId int, li
 	case "parent_tree":
 		sinceHitted := true
 		selectQuery = "SELECT M.m_id , M.date , M.message , M.edit , M.parent , M.u_nickname , M.t_id , M.f_slug FROM messages AS M "
-		whereQuery = " WHERE M.path[1] IN (SELECT m_id FROM messages WHERE t_id = $1 AND parent = 0 "
+		whereQuery = " WHERE M.path[1] IN (SELECT m_id FROM messages WHERE parent = 0 AND t_id = $1 "
 
 		if order != "DESC" {
 			orderQuery = " ORDER BY M.path , M.m_id  "
@@ -310,7 +310,16 @@ func (Thread ThreadRepoRealisation) GetPostsSorted(slug string, threadId int, li
 		additionalWhere += " "
 	}
 
+	//var explain *string
 	//fmt.Println(sortType, selectValues , selectQuery+whereQuery+additionalWhere+orderQuery+limitQuery)
+	//errExplain ,_ := Thread.dbLauncher.Query("EXPLAIN ANALYZE "+selectQuery+whereQuery+additionalWhere+orderQuery+limitQuery, selectValues...)
+	//fmt.Print("[DEBUG EXPLAIN] explain :")
+	//for errExplain.Next() {
+	//	errExplain.Scan(&explain)
+	//	fmt.Println(*explain)
+	//}
+	//errExplain.Close()
+
 	data, err = Thread.dbLauncher.Query(selectQuery+whereQuery+additionalWhere+orderQuery+limitQuery, selectValues...)
 
 	if err != nil {

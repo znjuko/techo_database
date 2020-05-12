@@ -32,11 +32,11 @@ func (ThreadU ThreadsUseRealistaion) CreatePosts(slugOrId string, posts []models
 		return nil, err
 	}
 
-	posts, err = ThreadU.threadRepo.GetParent(threadId, posts)
+	//posts, err = ThreadU.threadRepo.GetParent(threadId, posts)
 
-	if err != nil {
-		return nil, err
-	}
+	//if err != nil {
+	//	return nil, err
+	//}
 
 	t := time.Now()
 

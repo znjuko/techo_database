@@ -73,9 +73,9 @@ func Logs(next echo.HandlerFunc) echo.HandlerFunc {
 			err = next(rwContext)
 			respTime := time.Since(start)
 			fmt.Println("MICRO SEC:", respTime.Microseconds(), "\n PATH:", rwContext.Request().URL.Path, "\n METHOD:", rwContext.Request().Method)
-			if respTime.Milliseconds() >= 400 {
-				fmt.Println(rwContext.QueryParam("sort"))
-			}
+			//if respTime.Milliseconds() >= 400 {
+			//	fmt.Println(rwContext.QueryParam("sort"))
+			//}
 
 		} else {
 			err = next(rwContext)
@@ -96,7 +96,8 @@ func main() {
 	connectString := "user=" + usernameDB + " password=" + passwordDB + " dbname=" + nameDB + " sslmode=disable"
 
 	pgxConn, err := pgx.ParseConnectionString(connectString)
-	pgxConn.PreferSimpleProtocol = true
+	pgxConn.PreferSimpleProtocol = false
+
 	if err != nil {
 		server.Logger.Fatal("PARSING CONFIG ERROR", err.Error())
 	}
@@ -108,11 +109,7 @@ func main() {
 		AcquireTimeout: 0,
 	}
 
-	//config.Host = "localhost"
-	//config.Port = 5432
-	//config.Database = nameDB
-	//config.User = usernameDB
-	//config.Password = passwordDB
+
 
 	connPool, err := pgx.NewConnPool(config)
 	defer connPool.Close()
@@ -125,6 +122,7 @@ func main() {
 	api.forumHandler.SetupHandlers(server)
 	api.threadHandler.SetupHandlers(server)
 	api.postHandler.SetupHandlers(server)
+
 
 	server.Logger.Fatal(server.Start(":5000"))
 }

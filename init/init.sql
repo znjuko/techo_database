@@ -106,3 +106,4 @@ CREATE TRIGGER path_updater
     ON messages
     FOR EACH ROW
 EXECUTE PROCEDURE updater();
+

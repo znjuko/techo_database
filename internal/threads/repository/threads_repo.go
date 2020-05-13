@@ -2,6 +2,7 @@ package repository
 
 import (
 	"errors"
+	"github.com/jackc/pgtype"
 	"github.com/jackc/pgx"
 	"main/internal/models"
 	"strconv"
@@ -19,12 +20,22 @@ func NewThreadRepoRealisation(db *pgx.ConnPool) ThreadRepoRealisation {
 func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, forumSlug string, threadId int, posts []models.Message) ([]models.Message, error) {
 	currentPosts := make([]models.Message, 0)
 
+
+
 	tx, err := Thread.dbLauncher.Begin()
 
 	if err != nil {
 		//fmt.Println("[DEBUG] TX CREATING ERROR AT CreatePost", err)
 		return nil, err
 	}
+
+	stmt , err := tx.Prepare("insert-post","INSERT INTO messages (date , message , parent , path , u_nickname , f_slug , t_id) VALUES ($1 , $2 , $3 , $7::BIGINT[] , $4 , $5 , $6) RETURNING date , m_id")
+	//fmt.Println(stmt)
+	if err != nil {
+		//fmt.Println("[DEBUG] TX PREPARE ERROR AT CreatePost", err)
+		return nil, err
+	}
+
 
 	for _, value := range posts {
 
@@ -33,22 +44,33 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, forumSlug string
 		value.IsEdited = false
 
 		var err error
-		if value.Parent != 0 {
-			err = tx.QueryRow("INSERT INTO messages (date , message , parent , path , u_nickname , f_slug , t_id) VALUES ($1 , $2 , $3 , $7::BIGINT[] , $4 , $5 , $6) RETURNING date , m_id", timer, value.Message, value.Parent, value.Author, forumSlug, threadId, value.Path).Scan(&value.Created, &value.Id)
-		} else {
-			err = tx.QueryRow("INSERT INTO messages (date , message , parent , path , u_nickname , f_slug , t_id) VALUES ($1 , $2 , $3 , ARRAY[]::BIGINT[] , $4 , $5 , $6) RETURNING date , m_id", timer, value.Message, value.Parent, value.Author, forumSlug, threadId).Scan(&value.Created, &value.Id)
+
+		if value.Parent == 0 {
+			value.Path = pgtype.Int8Array{
+				Elements:   nil,
+				Dimensions: nil,
+				Status:     1,
+			}
 		}
 
+		err = tx.QueryRow(stmt.Name,timer, value.Message, value.Parent, value.Author, forumSlug, threadId, value.Path).Scan(&value.Created, &value.Id)
+
 		if err != nil {
-
 			tx.Rollback()
-
+			//fmt.Println("insert-post",err , value)
 			return nil, errors.New("no user")
 		}
 
 		currentPosts = append(currentPosts, value)
 	}
 	tx.Commit()
+
+	_ , err = Thread.dbLauncher.Prepare("insert-fu","INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2) ON CONFLICT (f_slug,u_nickname) DO NOTHING ")
+
+	if err != nil {
+		//fmt.Println("[DEBUG] PREPAREFU CREATING ERROR AT CreatePost", err)
+		return nil, err
+	}
 
 	txFU, err := Thread.dbLauncher.Begin()
 
@@ -57,8 +79,9 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, forumSlug string
 		return nil, err
 	}
 
+
 	for _, value := range posts {
-		txFU.Exec("INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2) ON CONFLICT (f_slug,u_nickname) DO NOTHING ", forumSlug, value.Author)
+		txFU.Exec("insert-fu", forumSlug, value.Author)
 	}
 
 	txFU.Commit()

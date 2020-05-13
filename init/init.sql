@@ -110,3 +110,4 @@ CREATE TRIGGER path_updater
     FOR EACH ROW
 EXECUTE PROCEDURE updater();
 
+

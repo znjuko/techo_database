@@ -75,9 +75,9 @@ func (Forum ForumRepoRealisation) CreateThread(thread models.Thread) (models.Thr
 	insertColumns := "(message , title , u_nickname , f_slug ,"
 	returningQuery := " RETURNING date , t_id"
 
-	tx.Prepare("get-author", "SELECT u_id , nickname FROM users WHERE nickname = $1")
+	//tx.Prepare("get-author", "SELECT u_id , nickname FROM users WHERE nickname = $1")
 
-	row := tx.QueryRow("get-author", thread.Author)
+	row := tx.QueryRow("SELECT u_id , nickname FROM users WHERE nickname = $1", thread.Author)
 
 	err = row.Scan(&userId, &thread.Author)
 
@@ -87,9 +87,9 @@ func (Forum ForumRepoRealisation) CreateThread(thread models.Thread) (models.Thr
 		return thread, err
 	}
 
-	tx.Prepare("get-forum", "SELECT slug FROM forums WHERE slug = $1")
+	//tx.Prepare("get-forum", "SELECT slug FROM forums WHERE slug = $1")
 
-	row = tx.QueryRow("get-forum", thread.Forum)
+	row = tx.QueryRow("SELECT slug FROM forums WHERE slug = $1", thread.Forum)
 
 	err = row.Scan(&thread.Forum)
 

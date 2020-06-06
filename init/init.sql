@@ -98,14 +98,37 @@ CLUSTER forumUsers USING idx_forumusers_slug_nick;
 CREATE INDEX idx_forumusers_nick ON forumUsers (u_nickname);
 
 
+-- CREATE OR REPLACE FUNCTION updater()
+--     RETURNS TRIGGER AS
+-- $BODY$
+-- BEGIN
+--     UPDATE messages SET path = path || NEW.m_id WHERE t_id = NEW.t_id AND m_id = NEW.m_id;
+--     RETURN NEW;
+-- END;
+-- $BODY$ LANGUAGE plpgsql;
+
 CREATE OR REPLACE FUNCTION updater()
     RETURNS TRIGGER AS
 $BODY$
+DECLARE
+    parent_path         BIGINT[];
+    first_parent_thread INT;
 BEGIN
-    UPDATE messages SET path = path || NEW.m_id WHERE t_id = NEW.t_id AND m_id = NEW.m_id;
+    IF (NEW.parent IS NULL) THEN
+        NEW.path := array_append(new.path, new.m_id);
+    ELSE
+        SELECT path FROM messages WHERE m_id = new.parent INTO parent_path;
+        SELECT t_id FROM messages WHERE m_id = parent_path[1] INTO first_parent_thread;
+        IF NOT FOUND OR first_parent_thread != NEW.t_id THEN
+            RAISE EXCEPTION 'parent is from different thread' USING ERRCODE = '00404';
+        end if;
+
+        NEW.path := NEW.path || parent_path || new.m_id;
+    END IF;
     RETURN NEW;
 END;
 $BODY$ LANGUAGE plpgsql;
+
 
 CREATE TRIGGER path_updater
     AFTER INSERT

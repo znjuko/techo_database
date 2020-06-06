@@ -114,16 +114,17 @@ DECLARE
     parent_path         BIGINT[];
     first_parent_thread INT;
 BEGIN
-    IF (NEW.parent IS NULL) THEN
-        NEW.path := array_append(new.path, new.m_id);
+
+    IF (NEW.parent = 0) THEN
+        NEW.path := array_append(NEW.path, NEW.m_id);
     ELSE
-        SELECT path FROM messages WHERE m_id = new.parent INTO parent_path;
-        SELECT t_id FROM messages WHERE m_id = parent_path[1] INTO first_parent_thread;
+        SELECT t_id , path FROM messages WHERE t_id = NEW.t_id AND m_id = NEW.parent INTO first_parent_thread , parent_path;
         IF NOT FOUND OR first_parent_thread != NEW.t_id THEN
             RAISE EXCEPTION 'parent is from different thread' USING ERRCODE = '00404';
-        end if;
+        END IF;
 
-        NEW.path := NEW.path || parent_path || new.m_id;
+        NEW.path := parent_path || NEW.m_id;
+
     END IF;
     RETURN NEW;
 END;
@@ -135,6 +136,8 @@ CREATE TRIGGER path_updater
     ON messages
     FOR EACH ROW
 EXECUTE PROCEDURE updater();
+
+
 --
 -- CREATE OR REPLACE FUNCTION fupdater()
 --     RETURNS TRIGGER AS

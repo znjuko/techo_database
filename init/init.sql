@@ -93,7 +93,7 @@ CREATE UNLOGGED TABLE forumUsers
     u_nickname CITEXT COLLATE "C" NOT NULL REFERENCES users (nickname) ON DELETE CASCADE
 );
 
-CREATE UNIQUE INDEX CONCURRENTLY idx_forumusers_slug_nick ON forumUsers (f_slug, u_nickname);
+CREATE UNIQUE INDEX idx_forumusers_slug_nick ON forumUsers (f_slug, u_nickname);
 CLUSTER forumUsers USING idx_forumusers_slug_nick;
 CREATE INDEX idx_forumusers_nick ON forumUsers (u_nickname);
 

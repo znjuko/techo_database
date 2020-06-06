@@ -22,9 +22,9 @@ import (
 )
 
 const (
-	usernameDB = "postgres"
-	passwordDB = "postgres"
-	nameDB     = "tp_db"
+	usernameDB = "docker"
+	passwordDB = "docker"
+	nameDB     = "docker"
 )
 
 type RequestHandler struct {
@@ -96,7 +96,7 @@ func main() {
 	connectString := "user=" + usernameDB + " password=" + passwordDB + " dbname=" + nameDB + " sslmode=disable"
 
 	pgxConn, err := pgx.ParseConnectionString(connectString)
-	pgxConn.PreferSimpleProtocol = true
+	pgxConn.PreferSimpleProtocol = false
 
 	if err != nil {
 		server.Logger.Fatal("PARSING CONFIG ERROR", err.Error())

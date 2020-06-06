@@ -92,7 +92,7 @@ CREATE UNLOGGED TABLE forumUsers
 );
 
 CREATE UNIQUE INDEX CONCURRENTLY idx_forumusers_slug_nick ON forumUsers (f_slug, u_nickname);
-CLUSTER forumUsers USING idx_forumusers_slug_nick;
+-- CLUSTER forumUsers USING idx_forumusers_slug_nick;
 CREATE INDEX idx_forumusers_nick ON forumUsers (u_nickname);
 
 

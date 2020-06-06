@@ -25,12 +25,12 @@ func (ThreadU ThreadsUseRealistaion) CreatePosts(slugOrId string, posts []models
 	} else {
 		slugOrId = ""
 	}
-
-	threadId, forumSlug, err := ThreadU.threadRepo.SelectThreadInfo(slugOrId, id)
-
-	if err != nil {
-		return nil, err
-	}
+	//
+	//threadId, forumSlug, err := ThreadU.threadRepo.SelectThreadInfo(slugOrId, id)
+	//
+	//if err != nil {
+	//	return nil, err
+	//}
 
 	//posts, err = ThreadU.threadRepo.GetParent(threadId, posts)
 	//
@@ -40,7 +40,7 @@ func (ThreadU ThreadsUseRealistaion) CreatePosts(slugOrId string, posts []models
 
 	t := time.Now()
 
-	return ThreadU.threadRepo.CreatePost(t, forumSlug, threadId, posts)
+	return ThreadU.threadRepo.CreatePost(t, slugOrId, id, posts)
 }
 
 func (ThreadU ThreadsUseRealistaion) VoteThread(slug, nickname string, voice int) (models.Thread, error) {

@@ -18,7 +18,7 @@ func NewThreadRepoRealisation(db *pgx.ConnPool) ThreadRepoRealisation {
 	return ThreadRepoRealisation{dbLauncher: db}
 }
 
-func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, forumSlug string, threadId int, posts []models.Message) ([]models.Message, error) {
+func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, slug string, id int, posts []models.Message) ([]models.Message, error) {
 	//currentPosts := make([]models.Message, 0)
 
 	tx, err := Thread.dbLauncher.Begin()
@@ -29,10 +29,29 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, forumSlug string
 		return nil, err
 	}
 
-	tx.Exec("UPDATE forums SET message_counter = message_counter + $1 WHERE slug = $2", len(posts), forumSlug)
+	threadId := 0
+	forumSlug := ""
+	var rowslug *pgx.Row
+
+	if slug != "" {
+		rowslug = tx.QueryRow("SELECT t_id , f_slug FROM threads WHERE slug = $1", slug)
+	} else {
+		rowslug = tx.QueryRow("SELECT t_id , f_slug FROM threads WHERE t_id = $1", id)
+	}
+
+	err = rowslug.Scan(&threadId, &forumSlug)
+
+	if err != nil {
+		tx.Rollback()
+		//fmt.Println("[DEBUG] ERROR AT SelectThreadInfo", err)
+		return nil, err
+	}
 
 	_, err = tx.Prepare("insert-fu", "INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2) ON CONFLICT (f_slug,u_nickname) DO NOTHING ")
 	stmt, err := tx.Prepare("insert-post", "INSERT INTO messages (date , message , parent , path , u_nickname , f_slug , t_id) VALUES ($1 , $2 , $3 , $7::BIGINT[] , $4 , $5 , $6) RETURNING date , m_id")
+	_, err = tx.Prepare("get-parent", "SELECT m_id , path FROM messages WHERE t_id = $2 AND m_id = $1")
+	_, err = tx.Prepare("update-forum", "SELECT m_id , path FROM messages WHERE t_id = $2 AND m_id = $1")
+
 	//fmt.Println(stmt)
 	if err != nil {
 		tx.Rollback()
@@ -55,7 +74,7 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, forumSlug string
 				Status:     1,
 			}
 		} else {
-			row := tx.QueryRow("SELECT m_id , path FROM messages WHERE t_id = $2 AND m_id = $1 ", posts[iter].Parent, threadId)
+			row := tx.QueryRow("get-parent", posts[iter].Parent, threadId)
 			err = row.Scan(&posts[iter].Parent, &posts[iter].Path)
 
 			if err != nil {
@@ -73,7 +92,7 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, forumSlug string
 			return nil, errors.New("no user")
 		}
 
-		tx.Exec("insert-fu", forumSlug, posts[iter].Author)
+		//tx.Exec("insert-fu", forumSlug, posts[iter].Author)
 
 		//_ , err  = tx.Exec("INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2) ON CONFLICT (f_slug,u_nickname) DO NOTHING ", forumSlug, posts[iter].Author)
 		//
@@ -98,9 +117,12 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, forumSlug string
 	//	return nil, err
 	//}
 	//
-	//for iter, _ := range posts {
-	//	tx.Exec("insert-fu", forumSlug, posts[iter].Author)
-	//}
+
+	tx.Exec("UPDATE forums SET message_counter = message_counter + $1 WHERE slug = $2", len(posts), forumSlug)
+
+	for iter, _ := range posts {
+		tx.Exec("insert-fu", forumSlug, posts[iter].Author)
+	}
 
 	tx.Commit()
 

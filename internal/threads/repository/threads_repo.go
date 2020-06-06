@@ -50,7 +50,7 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, slug string, id 
 	_, err = tx.Prepare("insert-fu", "INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2) ON CONFLICT (f_slug,u_nickname) DO NOTHING ")
 	stmt, err := tx.Prepare("insert-post", "INSERT INTO messages (date , message , parent , path , u_nickname , f_slug , t_id) VALUES ($1 , $2 , $3 , $7::BIGINT[] , $4 , $5 , $6) RETURNING date , m_id")
 	_, err = tx.Prepare("get-parent", "SELECT m_id , path FROM messages WHERE t_id = $2 AND m_id = $1")
-	_, err = tx.Prepare("update-forum", "SELECT m_id , path FROM messages WHERE t_id = $2 AND m_id = $1")
+	//_, err = tx.Prepare("update-forum", "SELECT m_id , path FROM messages WHERE t_id = $2 AND m_id = $1")
 
 	//fmt.Println(stmt)
 	if err != nil {

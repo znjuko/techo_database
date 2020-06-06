@@ -24,6 +24,7 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, forumSlug string
 	tx, err := Thread.dbLauncher.Begin()
 
 	if err != nil {
+		tx.Rollback()
 		//fmt.Println("[DEBUG] TX CREATING ERROR AT CreatePost", err)
 		return nil, err
 	}
@@ -31,6 +32,7 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, forumSlug string
 	stmt, err := tx.Prepare("insert-post", "INSERT INTO messages (date , message , parent , path , u_nickname , f_slug , t_id) VALUES ($1 , $2 , $3 , $7::BIGINT[] , $4 , $5 , $6) RETURNING date , m_id")
 	//fmt.Println(stmt)
 	if err != nil {
+		tx.Rollback()
 		//fmt.Println("[DEBUG] TX PREPARE ERROR AT CreatePost", err)
 		return nil, err
 	}
@@ -55,7 +57,7 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, forumSlug string
 
 			if err != nil {
 				tx.Rollback()
-				//fmt.Println("[DEBUG] error at method CreatePost (getting parent) :", err)
+				fmt.Println("[DEBUG] error at method CreatePost (getting parent) :", err)
 				return nil, errors.New("Parent post was created in another thread")
 			}
 		}
@@ -64,35 +66,45 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, forumSlug string
 
 		if err != nil {
 			tx.Rollback()
-			//fmt.Println("insert-post",err , value)
+			fmt.Println("insert-post",err , stmt.SQL)
 			return nil, errors.New("no user")
 		}
 
-		//tx.Exec("INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2) ON CONFLICT (f_slug,u_nickname) DO NOTHING ", forumSlug, posts[iter].Author)
+		//_ , err  = tx.Exec("INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2) ON CONFLICT (f_slug,u_nickname) DO NOTHING ", forumSlug, posts[iter].Author)
+		//
+		//if err != nil {
+		//	tx.Rollback()
+		//	fmt.Println("[DEBUG] PREPAREFU CREATING ERROR AT CreatePost", err)
+		//	return nil, err
+		//}
 	}
-	tx.Commit()
 
-	_, err = Thread.dbLauncher.Prepare("insert-fu", "INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2) ON CONFLICT (f_slug,u_nickname) DO NOTHING ")
+	tx.Exec("UPDATE forums SET message_counter = message_counter + $1 WHERE slug = $2", len(posts), forumSlug)
+
+
+
+
+	//txFU, err := Thread.dbLauncher.Begin()
+	//
+	//if err != nil {
+	//	//fmt.Println("[DEBUG] TXFU CREATING ERROR AT CreatePost", err)
+	//	return nil, err
+	//}
+	_, err = tx.Prepare("insert-fu", "INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2) ON CONFLICT (f_slug,u_nickname) DO NOTHING ")
 
 	if err != nil {
 		//fmt.Println("[DEBUG] PREPAREFU CREATING ERROR AT CreatePost", err)
 		return nil, err
 	}
 
-	txFU, err := Thread.dbLauncher.Begin()
-
-	if err != nil {
-		//fmt.Println("[DEBUG] TXFU CREATING ERROR AT CreatePost", err)
-		return nil, err
-	}
 
 	for iter , _ := range posts {
-		txFU.Exec("insert-fu", forumSlug, posts[iter].Author)
+		tx.Exec("insert-fu", forumSlug, posts[iter].Author)
 	}
 
-	txFU.Commit()
+	tx.Commit()
 
-	Thread.dbLauncher.Exec("UPDATE forums SET message_counter = message_counter + $1 WHERE slug = $2", len(posts), forumSlug)
+
 
 	return posts, nil
 }

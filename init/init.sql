@@ -52,7 +52,10 @@ CREATE TABLE threads
 
 CREATE INDEX idx_threads_fslugdate ON threads (f_slug, date);
 CLUSTER threads USING idx_threads_fslugdate;
-CREATE INDEX idx_threads_slughash ON threads (slug);
+CREATE INDEX idx_threads_slug ON threads (slug);
+CREATE INDEX idx_threads_slughash ON threads USING hash (slug);
+CREATE INDEX idx_threads_tidhash ON threads USING hash (t_id);
+
 
 CREATE TABLE voteThreads
 (
@@ -80,7 +83,7 @@ CREATE TABLE messages
 CREATE INDEX idx_messages_tid_mid ON messages (t_id, m_id);
 CREATE INDEX idx_messages_parent_tree_tid_parent ON messages (t_id, m_id) WHERE parent = 0;
 CREATE INDEX idx_messages_path_1 ON messages (t_id ,(path[1]), path);
-CLUSTER messages USING idx_messages_path_1;
+-- CLUSTER messages USING idx_messages_path_1;
 CREATE INDEX idx_messages_tid_path ON messages (t_id, path);
 CREATE INDEX idx_messages_path ON messages (path, m_id);
 
@@ -90,7 +93,7 @@ CREATE TABLE forumUsers
     u_nickname CITEXT COLLATE "C" NOT NULL REFERENCES users (nickname) ON DELETE CASCADE
 );
 
-CREATE UNIQUE INDEX idx_forumusers_slug_nick ON forumUsers (f_slug, u_nickname);
+CREATE UNIQUE INDEX CONCURRENTLY idx_forumusers_slug_nick ON forumUsers (f_slug, u_nickname);
 CLUSTER forumUsers USING idx_forumusers_slug_nick;
 CREATE INDEX idx_forumusers_nick ON forumUsers (u_nickname);
 
@@ -104,12 +107,12 @@ BEGIN
 END;
 $BODY$ LANGUAGE plpgsql;
 
-CREATE TRIGGER path_updater
-    AFTER INSERT
-    ON messages
-    FOR EACH ROW
-EXECUTE PROCEDURE updater();
-
+-- CREATE TRIGGER path_updater
+--     AFTER INSERT
+--     ON messages
+--     FOR EACH ROW
+-- EXECUTE PROCEDURE updater();
+--
 -- CREATE OR REPLACE FUNCTION fupdater()
 --     RETURNS TRIGGER AS
 -- $BODY$

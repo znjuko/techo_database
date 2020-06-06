@@ -49,7 +49,7 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, slug string, id 
 
 	_, err = tx.Prepare("insert-fu", "INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2) ON CONFLICT (f_slug,u_nickname) DO NOTHING ")
 	stmt, err := tx.Prepare("insert-post", "INSERT INTO messages (date , message , parent , path , u_nickname , f_slug , t_id) VALUES ($1 , $2 , $3 , $7::BIGINT[] , $4 , $5 , $6) RETURNING date , m_id")
-	_, err = tx.Prepare("get-parent", "SELECT m_id , path FROM messages WHERE t_id = $2 AND m_id = $1")
+	//_, err = tx.Prepare("get-parent", "SELECT m_id , path FROM messages WHERE t_id = $2 AND m_id = $1")
 	//_, err = tx.Prepare("update-forum", "SELECT m_id , path FROM messages WHERE t_id = $2 AND m_id = $1")
 
 	//fmt.Println(stmt)
@@ -67,28 +67,20 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, slug string, id 
 
 		var err error
 
-		if posts[iter].Parent == 0 {
-			posts[iter].Path = pgtype.Int8Array{
-				Elements:   nil,
-				Dimensions: nil,
-				Status:     1,
-			}
-		} else {
-			row := tx.QueryRow("get-parent", posts[iter].Parent, threadId)
-			err = row.Scan(&posts[iter].Parent, &posts[iter].Path)
-
-			if err != nil {
-				tx.Rollback()
-				//fmt.Println("[DEBUG] error at method CreatePost (getting parent) :", err)
-				return nil, errors.New("Parent post was created in another thread")
-			}
+		posts[iter].Path = pgtype.Int8Array{
+			Elements:   nil,
+			Dimensions: nil,
+			Status:     1,
 		}
 
 		err = tx.QueryRow(stmt.Name, timer, posts[iter].Message, posts[iter].Parent, posts[iter].Author, forumSlug, threadId, posts[iter].Path).Scan(&posts[iter].Created, &posts[iter].Id)
 
 		if err != nil {
 			tx.Rollback()
-			//fmt.Println("insert-post", err, stmt.SQL)
+			//fmt.Println(err)
+			if err.Error() == "ERROR: parent is from different thread (SQLSTATE 00404)" {
+				return nil, errors.New("Parent post was created in another thread")
+			}
 			return nil, errors.New("no user")
 		}
 
@@ -102,7 +94,6 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, slug string, id 
 		//	return nil, err
 		//}
 	}
-
 
 	//txFU, err := Thread.dbLauncher.Begin()
 	//

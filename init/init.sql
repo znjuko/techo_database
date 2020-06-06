@@ -34,6 +34,8 @@ CREATE UNLOGGED TABLE forums
 );
 
 CREATE INDEX idx_forums_slug ON forums (slug);
+CREATE INDEX idx_forums_slug_hash ON forums USING hash (slug);
+
 
 CREATE UNLOGGED TABLE threads
 (

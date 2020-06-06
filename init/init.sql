@@ -1,5 +1,3 @@
-SET synchronous_commit TO OFF;
-
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS forums CASCADE;
 DROP TABLE IF EXISTS threads CASCADE;
@@ -14,7 +12,7 @@ DROP FUNCTION IF EXISTS updater;
 DROP TRIGGER IF EXISTS fu_updater ON messages;
 DROP FUNCTION IF EXISTS fupdater;
 
-CREATE TABLE users
+CREATE UNLOGGED TABLE users
 (
     u_id     BIGSERIAL PRIMARY KEY,
     nickname CITEXT COLLATE "C" UNIQUE,
@@ -25,7 +23,7 @@ CREATE TABLE users
 
 CREATE INDEX idx_users_nickname ON users (nickname);
 
-CREATE TABLE forums
+CREATE UNLOGGED TABLE forums
 (
     f_id            BIGSERIAL PRIMARY KEY,
     slug            CITEXT UNIQUE NOT NULL,
@@ -37,7 +35,7 @@ CREATE TABLE forums
 
 CREATE INDEX idx_forums_slug ON forums (slug);
 
-CREATE TABLE threads
+CREATE UNLOGGED TABLE threads
 (
     t_id       BIGSERIAL PRIMARY KEY,
     slug       CITEXT UNIQUE,
@@ -57,7 +55,7 @@ CREATE INDEX idx_threads_slughash ON threads USING hash (slug);
 CREATE INDEX idx_threads_tidhash ON threads USING hash (t_id);
 
 
-CREATE TABLE voteThreads
+CREATE UNLOGGED TABLE voteThreads
 (
     vt_id      BIGSERIAL,
     t_id       BIGINT             NOT NULL REFERENCES threads ON DELETE CASCADE,
@@ -67,7 +65,7 @@ CREATE TABLE voteThreads
 
 CREATE UNIQUE INDEX idx_voteth_thrnick ON voteThreads USING btree (t_id, u_nickname);
 
-CREATE TABLE messages
+CREATE UNLOGGED TABLE messages
 (
     m_id       BIGSERIAL PRIMARY KEY,
     date       TIMESTAMP WITH TIME ZONE,
@@ -82,12 +80,12 @@ CREATE TABLE messages
 
 CREATE INDEX idx_messages_tid_mid ON messages (t_id, m_id);
 CREATE INDEX idx_messages_parent_tree_tid_parent ON messages (t_id, m_id) WHERE parent = 0;
-CREATE INDEX idx_messages_path_1 ON messages (t_id ,(path[1]), path);
+CREATE INDEX idx_messages_path_1 ON messages (t_id, (path[1]), path);
 -- CLUSTER messages USING idx_messages_path_1;
 CREATE INDEX idx_messages_tid_path ON messages (t_id, path);
 CREATE INDEX idx_messages_path ON messages (path, m_id);
 
-CREATE TABLE forumUsers
+CREATE UNLOGGED TABLE forumUsers
 (
     f_slug     CITEXT COLLATE "C" NOT NULL REFERENCES forums (slug) ON DELETE CASCADE,
     u_nickname CITEXT COLLATE "C" NOT NULL REFERENCES users (nickname) ON DELETE CASCADE

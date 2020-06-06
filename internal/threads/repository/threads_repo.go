@@ -19,7 +19,7 @@ func NewThreadRepoRealisation(db *pgx.ConnPool) ThreadRepoRealisation {
 }
 
 func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, forumSlug string, threadId int, posts []models.Message) ([]models.Message, error) {
-	currentPosts := make([]models.Message, 0)
+	//currentPosts := make([]models.Message, 0)
 
 	tx, err := Thread.dbLauncher.Begin()
 
@@ -28,31 +28,39 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, forumSlug string
 		return nil, err
 	}
 
-	stmt , err := tx.Prepare("insert-post","INSERT INTO messages (date , message , parent , path , u_nickname , f_slug , t_id) VALUES ($1 , $2 , $3 , $7::BIGINT[] , $4 , $5 , $6) RETURNING date , m_id")
+	stmt, err := tx.Prepare("insert-post", "INSERT INTO messages (date , message , parent , path , u_nickname , f_slug , t_id) VALUES ($1 , $2 , $3 , $7::BIGINT[] , $4 , $5 , $6) RETURNING date , m_id")
 	//fmt.Println(stmt)
 	if err != nil {
 		//fmt.Println("[DEBUG] TX PREPARE ERROR AT CreatePost", err)
 		return nil, err
 	}
 
+	for iter , _ := range posts {
 
-	for _, value := range posts {
-
-		value.Thread = threadId
-		value.Forum = forumSlug
-		value.IsEdited = false
+		posts[iter].Thread = threadId
+		posts[iter].Forum = forumSlug
+		posts[iter].IsEdited = false
 
 		var err error
 
-		if value.Parent == 0 {
-			value.Path = pgtype.Int8Array{
+		if posts[iter].Parent == 0 {
+			posts[iter].Path = pgtype.Int8Array{
 				Elements:   nil,
 				Dimensions: nil,
 				Status:     1,
 			}
+		} else {
+			row := tx.QueryRow("SELECT m_id , path FROM messages WHERE t_id = $2 AND m_id = $1 ", posts[iter].Parent, threadId)
+			err = row.Scan(&posts[iter].Parent, &posts[iter].Path)
+
+			if err != nil {
+				tx.Rollback()
+				//fmt.Println("[DEBUG] error at method CreatePost (getting parent) :", err)
+				return nil, errors.New("Parent post was created in another thread")
+			}
 		}
 
-		err = tx.QueryRow(stmt.Name,timer, value.Message, value.Parent, value.Author, forumSlug, threadId, value.Path).Scan(&value.Created, &value.Id)
+		err = tx.QueryRow(stmt.Name, timer, posts[iter].Message, posts[iter].Parent, posts[iter].Author, forumSlug, threadId, posts[iter].Path).Scan(&posts[iter].Created, &posts[iter].Id)
 
 		if err != nil {
 			tx.Rollback()
@@ -60,11 +68,11 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, forumSlug string
 			return nil, errors.New("no user")
 		}
 
-		currentPosts = append(currentPosts, value)
+		//tx.Exec("INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2) ON CONFLICT (f_slug,u_nickname) DO NOTHING ", forumSlug, posts[iter].Author)
 	}
 	tx.Commit()
 
-	_ , err = Thread.dbLauncher.Prepare("insert-fu","INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2) ON CONFLICT (f_slug,u_nickname) DO NOTHING ")
+	_, err = Thread.dbLauncher.Prepare("insert-fu", "INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2) ON CONFLICT (f_slug,u_nickname) DO NOTHING ")
 
 	if err != nil {
 		//fmt.Println("[DEBUG] PREPAREFU CREATING ERROR AT CreatePost", err)
@@ -78,16 +86,15 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, forumSlug string
 		return nil, err
 	}
 
-
-	for _, value := range posts {
-		txFU.Exec("insert-fu", forumSlug, value.Author)
+	for iter , _ := range posts {
+		txFU.Exec("insert-fu", forumSlug, posts[iter].Author)
 	}
 
 	txFU.Commit()
 
 	Thread.dbLauncher.Exec("UPDATE forums SET message_counter = message_counter + $1 WHERE slug = $2", len(posts), forumSlug)
 
-	return currentPosts, nil
+	return posts, nil
 }
 
 func (Thread ThreadRepoRealisation) SelectThreadInfo(slug string, id int) (int, string, error) {
@@ -321,7 +328,7 @@ func (Thread ThreadRepoRealisation) GetPostsSorted(slug string, threadId int, li
 
 	case "tree":
 		selectQuery += " messages"
-		orderQuery = " ORDER BY path[1] " + order + " , path " + order + " "
+		orderQuery = " ORDER BY path " + order + " "
 
 		if since != 0 {
 			valueCounter++
@@ -338,18 +345,18 @@ func (Thread ThreadRepoRealisation) GetPostsSorted(slug string, threadId int, li
 	case "parent_tree":
 		sinceHitted := true
 		selectQuery = "SELECT M.m_id , M.date , M.message , M.edit , M.parent , M.u_nickname , M.t_id , M.f_slug FROM messages AS M "
-		whereQuery = " WHERE M.path[1] IN (SELECT m_id FROM messages WHERE parent = 0 AND t_id = $1 "
+		whereQuery = " WHERE M.t_id = $1 AND M.path[1] IN (SELECT m_id FROM messages WHERE t_id = $1 AND  parent = 0 "
 
 		if order != "DESC" {
-			orderQuery = " ORDER BY M.path , M.m_id  "
+			orderQuery = " ORDER BY M.path[1] , M.path "
 		} else {
-			orderQuery = " ORDER BY M.path[1] " + order + " , M.path , M.m_id  "
+			orderQuery = " ORDER BY M.path[1] " + order + " , M.path "
 		}
 
 		if limit != 0 {
 			if since != 0 {
 				valueCounter++
-				whereQuery += "AND path[1] " + ranger + "(SELECT path[1] FROM messages WHERE t_id = $1 AND m_id = $2)" + " "
+				whereQuery += "AND m_id " + ranger + "(SELECT path[1] FROM messages WHERE t_id = $1 AND m_id = $2)" + " "
 				selectValues = append(selectValues, since)
 				sinceHitted = false
 			}
@@ -366,9 +373,9 @@ func (Thread ThreadRepoRealisation) GetPostsSorted(slug string, threadId int, li
 
 		additionalWhere += " "
 	}
-
+	//
 	//var explain *string
-	//fmt.Println(sortType, selectValues , selectQuery+whereQuery+additionalWhere+orderQuery+limitQuery)
+	//fmt.Println("SORT:",sortType, selectValues , selectQuery+whereQuery+additionalWhere+orderQuery+limitQuery)
 	//errExplain ,_ := Thread.dbLauncher.Query("EXPLAIN ANALYZE "+selectQuery+whereQuery+additionalWhere+orderQuery+limitQuery, selectValues...)
 	//fmt.Print("[DEBUG EXPLAIN] explain :")
 	//for errExplain.Next() {

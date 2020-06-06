@@ -22,9 +22,9 @@ import (
 )
 
 const (
-	usernameDB = "postgres"
-	passwordDB = "postgres"
-	nameDB     = "tp_db"
+	usernameDB = "docker"
+	passwordDB = "docker"
+	nameDB     = "docker"
 )
 
 type RequestHandler struct {

@@ -114,6 +114,7 @@ DECLARE
     parent_path         BIGINT[];
     first_parent_thread INT;
 BEGIN
+
     IF (NEW.parent = 0) THEN
         NEW.path := array_append(NEW.path, NEW.m_id);
     ELSE
@@ -123,13 +124,15 @@ BEGIN
         END IF;
 
         NEW.path := parent_path || NEW.m_id;
+
     END IF;
     RETURN NEW;
 END;
 $BODY$ LANGUAGE plpgsql;
 
-CREATE TRIGGER u_updater
-    BEFORE INSERT
+
+CREATE TRIGGER path_updater
+    AFTER INSERT
     ON messages
     FOR EACH ROW
 EXECUTE PROCEDURE updater();

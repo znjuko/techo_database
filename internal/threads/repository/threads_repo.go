@@ -2,6 +2,7 @@ package repository
 
 import (
 	"errors"
+	"fmt"
 	"github.com/jackc/pgtype"
 	"github.com/jackc/pgx"
 	"main/internal/models"
@@ -19,8 +20,6 @@ func NewThreadRepoRealisation(db *pgx.ConnPool) ThreadRepoRealisation {
 
 func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, forumSlug string, threadId int, posts []models.Message) ([]models.Message, error) {
 	currentPosts := make([]models.Message, 0)
-
-
 
 	tx, err := Thread.dbLauncher.Begin()
 
@@ -264,6 +263,14 @@ func (Thread ThreadRepoRealisation) GetThread(threadId int, thread models.Thread
 
 func (Thread ThreadRepoRealisation) GetPostsSorted(slug string, threadId int, limit int, since int, sortType string, desc bool) ([]models.Message, error) {
 
+	tx, err := Thread.dbLauncher.Begin()
+
+	if err != nil {
+		tx.Rollback()
+		//fmt.Println("[DEBUG] TX CREATING ERROR AT CreatePost", err)
+		return nil, err
+	}
+
 	ranger := ">"
 	order := "ASC"
 	if desc {
@@ -271,7 +278,7 @@ func (Thread ThreadRepoRealisation) GetPostsSorted(slug string, threadId int, li
 		ranger = "<"
 	}
 
-	selectQuery := "SELECT m_id , date , message , edit , parent , u_nickname , t_id , f_slug FROM messages "
+	selectQuery := "SELECT m_id , date , message , edit , parent , u_nickname , t_id , f_slug FROM "
 	whereQuery := " "
 	orderQuery := " ORDER BY m_id " + order + " "
 	limitQuery := " "
@@ -279,12 +286,12 @@ func (Thread ThreadRepoRealisation) GetPostsSorted(slug string, threadId int, li
 	selectValues := make([]interface{}, 0)
 	valueCounter := 1
 
-	var err error
-
 	if slug != "" {
-		trow := Thread.dbLauncher.QueryRow("SELECT t_id FROM threads WHERE slug = $1 ", slug)
+		tx.Prepare("gettid", "SELECT t_id FROM threads WHERE slug = $1")
+		trow := tx.QueryRow("gettid", slug)
 
 		if err = trow.Scan(&threadId); err != nil {
+			tx.Rollback()
 			return nil, err
 		}
 	}
@@ -297,6 +304,7 @@ func (Thread ThreadRepoRealisation) GetPostsSorted(slug string, threadId int, li
 
 	switch sortType {
 	case "flat":
+		whereQuery = "(SELECT * FROM messages WHERE t_id = $1 "
 		if since != 0 {
 			valueCounter++
 			additionalWhere += " AND m_id " + ranger + "$" + strconv.Itoa(valueCounter) + " "
@@ -309,7 +317,10 @@ func (Thread ThreadRepoRealisation) GetPostsSorted(slug string, threadId int, li
 			selectValues = append(selectValues, limit)
 		}
 
+		additionalWhere += ") m "
+
 	case "tree":
+		selectQuery += " messages"
 		orderQuery = " ORDER BY path[1] " + order + " , path " + order + " "
 
 		if since != 0 {
@@ -366,9 +377,11 @@ func (Thread ThreadRepoRealisation) GetPostsSorted(slug string, threadId int, li
 	//}
 	//errExplain.Close()
 
-	data, err = Thread.dbLauncher.Query(selectQuery+whereQuery+additionalWhere+orderQuery+limitQuery, selectValues...)
+	data, err = tx.Query(selectQuery+whereQuery+additionalWhere+orderQuery+limitQuery, selectValues...)
 
 	if err != nil {
+		tx.Rollback()
+		fmt.Println(err)
 		return nil, err
 	}
 
@@ -379,6 +392,7 @@ func (Thread ThreadRepoRealisation) GetPostsSorted(slug string, threadId int, li
 			err = data.Scan(&msg.Id, &msg.Created, &msg.Message, &msg.IsEdited, &msg.Parent, &msg.Author, &msg.Thread, &msg.Forum)
 
 			if err != nil {
+				tx.Rollback()
 				//fmt.Println(err)
 			}
 
@@ -389,16 +403,19 @@ func (Thread ThreadRepoRealisation) GetPostsSorted(slug string, threadId int, li
 	}
 
 	if len(messages) == 0 {
-		trow := Thread.dbLauncher.QueryRow("SELECT t_id , slug FROM threads WHERE t_id = $1", selectValues[0])
+		trow := tx.QueryRow("SELECT t_id , slug FROM threads WHERE t_id = $1", selectValues[0])
 
 		var threadId *int64
 		var threadSlug *string
 
 		if err = trow.Scan(&threadId, &threadSlug); err != nil {
+			tx.Rollback()
 			//fmt.Println(err)
 			return nil, err
 		}
 	}
+
+	tx.Commit()
 
 	return messages, err
 

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"errors"
+	"fmt"
 	"github.com/jackc/pgx"
 	"main/internal/models"
 	"strconv"
@@ -58,6 +59,13 @@ func (Forum ForumRepoRealisation) GetForum(slug string) (models.Forum, error) {
 
 func (Forum ForumRepoRealisation) CreateThread(thread models.Thread) (models.Thread, error) {
 
+	tx, err := Forum.database.Begin()
+
+	if err != nil {
+		fmt.Println("[DEBUG] TX CREATING ERROR AT CreateThread", err)
+		return thread, err
+	}
+
 	userId := int64(0)
 	var timer time.Time
 	insertValues := make([]interface{}, 0)
@@ -67,20 +75,26 @@ func (Forum ForumRepoRealisation) CreateThread(thread models.Thread) (models.Thr
 	insertColumns := "(message , title , u_nickname , f_slug ,"
 	returningQuery := " RETURNING date , t_id"
 
-	row := Forum.database.QueryRow("SELECT u_id , nickname FROM users WHERE nickname = $1", thread.Author)
+	tx.Prepare("get-author", "SELECT u_id , nickname FROM users WHERE nickname = $1")
 
-	err := row.Scan(&userId, &thread.Author)
+	row := tx.QueryRow("get-author", thread.Author)
+
+	err = row.Scan(&userId, &thread.Author)
 
 	if err != nil {
+		tx.Rollback()
 		//fmt.Println("[DEBUG] error at method CreateThread (scan of existing user) :", err)
 		return thread, err
 	}
 
-	row = Forum.database.QueryRow("SELECT slug FROM forums WHERE slug = $1", thread.Forum)
+	tx.Prepare("get-forum", "SELECT slug FROM forums WHERE slug = $1")
+
+	row = tx.QueryRow("get-forum", thread.Forum)
 
 	err = row.Scan(&thread.Forum)
 
 	if err != nil {
+		tx.Rollback()
 		//fmt.Println("[DEBUG] error at method CreateThread (scan of existing forum) :", err)
 		return thread, err
 	}
@@ -104,9 +118,7 @@ func (Forum ForumRepoRealisation) CreateThread(thread models.Thread) (models.Thr
 	insertColumns = insertColumns[:len(insertColumns)-1] + ")"
 	valuesQuery = valuesQuery[:len(valuesQuery)-1] + ")"
 
-	row = Forum.database.QueryRow(insertQuery+insertColumns+valuesQuery+returningQuery, insertValues...)
-
-	err = row.Scan(&timer, &thread.Id)
+	err = tx.QueryRow(insertQuery+insertColumns+valuesQuery+returningQuery, insertValues...).Scan(&timer, &thread.Id)
 
 	if timer.String() != "" {
 		timer.Format(time.RFC3339)
@@ -115,24 +127,27 @@ func (Forum ForumRepoRealisation) CreateThread(thread models.Thread) (models.Thr
 	}
 
 	if err != nil {
+		tx.Rollback()
 		//fmt.Println("[DEBUG] error at method CreateThread (creating new forum) :", err)
+		//fmt.Println(insertQuery+insertColumns+valuesQuery+returningQuery, len(insertValues))
 		row = Forum.database.QueryRow("SELECT u_nickname , date ,f_slug , t_id , message , slug , title , votes FROM threads WHERE slug = $1", thread.Slug)
 		err = row.Scan(&thread.Author, &thread.Created, &thread.Forum, &thread.Id, &thread.Message, &thread.Slug, &thread.Title, &thread.Votes)
 		return thread, errors.New("thread already exist")
 	}
 
-	Forum.database.Exec("INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2)", thread.Forum, thread.Author)
-
-	//if err != nil {
-	//	//fmt.Println("\n", err, "\n")
-	//}
-
-	Forum.database.Exec("UPDATE forums SET thread_counter = thread_counter +1 WHERE slug = $1", thread.Forum)
+	_, err = tx.Exec("INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2) ON CONFLICT (f_slug,u_nickname) DO NOTHING", thread.Forum, thread.Author)
 
 	//if err != nil {
 	//	fmt.Println("\n", err, "\n")
 	//}
 
+	_, err = tx.Exec("UPDATE forums SET thread_counter = thread_counter +1 WHERE slug = $1", thread.Forum)
+
+	//if err != nil {
+	//	fmt.Println("\n", "update-f", err, "\n")
+	//}
+
+	tx.Commit()
 	return thread, nil
 }
 

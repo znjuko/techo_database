@@ -107,11 +107,11 @@ BEGIN
 END;
 $BODY$ LANGUAGE plpgsql;
 
--- CREATE TRIGGER path_updater
---     AFTER INSERT
---     ON messages
---     FOR EACH ROW
--- EXECUTE PROCEDURE updater();
+CREATE TRIGGER path_updater
+    AFTER INSERT
+    ON messages
+    FOR EACH ROW
+EXECUTE PROCEDURE updater();
 --
 -- CREATE OR REPLACE FUNCTION fupdater()
 --     RETURNS TRIGGER AS

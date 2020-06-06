@@ -29,6 +29,9 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, forumSlug string
 		return nil, err
 	}
 
+	tx.Exec("UPDATE forums SET message_counter = message_counter + $1 WHERE slug = $2", len(posts), forumSlug)
+
+	_, err = tx.Prepare("insert-fu", "INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2) ON CONFLICT (f_slug,u_nickname) DO NOTHING ")
 	stmt, err := tx.Prepare("insert-post", "INSERT INTO messages (date , message , parent , path , u_nickname , f_slug , t_id) VALUES ($1 , $2 , $3 , $7::BIGINT[] , $4 , $5 , $6) RETURNING date , m_id")
 	//fmt.Println(stmt)
 	if err != nil {
@@ -37,7 +40,7 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, forumSlug string
 		return nil, err
 	}
 
-	for iter , _ := range posts {
+	for iter, _ := range posts {
 
 		posts[iter].Thread = threadId
 		posts[iter].Forum = forumSlug
@@ -57,7 +60,7 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, forumSlug string
 
 			if err != nil {
 				tx.Rollback()
-				fmt.Println("[DEBUG] error at method CreatePost (getting parent) :", err)
+				//fmt.Println("[DEBUG] error at method CreatePost (getting parent) :", err)
 				return nil, errors.New("Parent post was created in another thread")
 			}
 		}
@@ -66,9 +69,11 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, forumSlug string
 
 		if err != nil {
 			tx.Rollback()
-			fmt.Println("insert-post",err , stmt.SQL)
+			//fmt.Println("insert-post", err, stmt.SQL)
 			return nil, errors.New("no user")
 		}
+
+		tx.Exec("insert-fu", forumSlug, posts[iter].Author)
 
 		//_ , err  = tx.Exec("INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2) ON CONFLICT (f_slug,u_nickname) DO NOTHING ", forumSlug, posts[iter].Author)
 		//
@@ -79,10 +84,6 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, forumSlug string
 		//}
 	}
 
-	tx.Exec("UPDATE forums SET message_counter = message_counter + $1 WHERE slug = $2", len(posts), forumSlug)
-
-
-
 
 	//txFU, err := Thread.dbLauncher.Begin()
 	//
@@ -90,21 +91,18 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, forumSlug string
 	//	//fmt.Println("[DEBUG] TXFU CREATING ERROR AT CreatePost", err)
 	//	return nil, err
 	//}
-	_, err = tx.Prepare("insert-fu", "INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2) ON CONFLICT (f_slug,u_nickname) DO NOTHING ")
 
-	if err != nil {
-		//fmt.Println("[DEBUG] PREPAREFU CREATING ERROR AT CreatePost", err)
-		return nil, err
-	}
-
-
-	for iter , _ := range posts {
-		tx.Exec("insert-fu", forumSlug, posts[iter].Author)
-	}
+	//if err != nil {
+	//	tx.Rollback()
+	//	//fmt.Println("[DEBUG] PREPAREFU CREATING ERROR AT CreatePost", err)
+	//	return nil, err
+	//}
+	//
+	//for iter, _ := range posts {
+	//	tx.Exec("insert-fu", forumSlug, posts[iter].Author)
+	//}
 
 	tx.Commit()
-
-
 
 	return posts, nil
 }
@@ -397,6 +395,7 @@ func (Thread ThreadRepoRealisation) GetPostsSorted(slug string, threadId int, li
 	//errExplain.Close()
 
 	data, err = tx.Query(selectQuery+whereQuery+additionalWhere+orderQuery+limitQuery, selectValues...)
+	//fmt.Println(sortType, selectQuery+whereQuery+additionalWhere+orderQuery+limitQuery)
 
 	if err != nil {
 		tx.Rollback()

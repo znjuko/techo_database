@@ -81,7 +81,7 @@ func (PostRepo PostRepoRealisation) UpdatePost(updateData models.Message) (model
 
 	var row *pgx.Row
 	if updateData.Message != "" {
-		row = PostRepo.dbLauncher.QueryRow("UPDATE messages SET edit = CASE WHEN message = $1 THEN FALSE ELSE TRUE END , message = $1  WHERE m_id = $2 RETURNING m_id , date , message , edit, parent , u_nickname , f_slug , t_id", updateData.Message, updateData.Id)
+		row = PostRepo.dbLauncher.QueryRow("UPDATE messages SET edit = CASE WHEN message = $1 THEN FALSE ELSE TRUE END , message = $1  WHERE m_id = $2 RETURNING m_id , date , message , edit, parent , u_nickname , t_id, f_slug", updateData.Message, updateData.Id)
 	} else {
 		row = PostRepo.dbLauncher.QueryRow("SELECT m_id , date , message , edit, parent , u_nickname ,  t_id ,f_slug FROM messages WHERE m_id = $1", updateData.Id)
 	}

@@ -21,7 +21,9 @@ CREATE UNLOGGED TABLE users
     about    TEXT
 );
 
-CREATE INDEX idx_users_nickname ON users (nickname);
+CREATE INDEX idx_users_nickname ON users (email);
+CREATE INDEX idx_users_all ON users (nickname, fullname, email, about);
+CLUSTER users USING idx_users_all;
 
 CREATE UNLOGGED TABLE forums
 (
@@ -35,6 +37,8 @@ CREATE UNLOGGED TABLE forums
 
 CREATE INDEX idx_forums_slug ON forums (slug);
 CREATE INDEX idx_forums_slug_hash ON forums USING hash (slug);
+CLUSTER forums USING idx_forums_slug_hash;
+CREATE INDEX idx_forums_all ON forums (slug, title, u_nickname, message_counter, thread_counter);
 
 
 CREATE UNLOGGED TABLE threads
@@ -55,6 +59,7 @@ CLUSTER threads USING idx_threads_fslugdate;
 CREATE INDEX idx_threads_slug ON threads (slug);
 CREATE INDEX idx_threads_slughash ON threads USING hash (slug);
 CREATE INDEX idx_threads_tidhash ON threads USING hash (t_id);
+CREATE INDEX idx_threads_all ON threads (t_id, date, message, title, votes, slug, f_slug, u_nickname);
 
 
 CREATE UNLOGGED TABLE voteThreads
@@ -86,6 +91,7 @@ CREATE INDEX idx_messages_path_1 ON messages (t_id, (path[1]), path);
 CLUSTER messages USING idx_messages_path_1;
 CREATE INDEX idx_messages_tid_path ON messages (t_id, path);
 CREATE INDEX idx_messages_path ON messages (path, m_id);
+CREATE INDEX idx_messages_all ON messages (m_id, date, message, edit, parent, u_nickname, t_id, f_slug);
 
 CREATE UNLOGGED TABLE forumUsers
 (
@@ -107,7 +113,10 @@ BEGIN
     IF (NEW.parent = 0) THEN
         NEW.path := array_append(NEW.path, NEW.m_id);
     ELSE
-        SELECT t_id , path FROM messages WHERE t_id = NEW.t_id AND m_id = NEW.parent INTO first_parent_thread , parent_path;
+        SELECT t_id, path
+        FROM messages
+        WHERE t_id = NEW.t_id AND m_id = NEW.parent
+        INTO first_parent_thread , parent_path;
         IF NOT FOUND OR first_parent_thread != NEW.t_id THEN
             RAISE EXCEPTION 'Parent post was created in another thread' USING ERRCODE = '00404';
         END IF;

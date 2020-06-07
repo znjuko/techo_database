@@ -19,13 +19,11 @@ func NewThreadRepoRealisation(db *pgx.ConnPool) ThreadRepoRealisation {
 }
 
 func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, slug string, id int, posts []models.Message) ([]models.Message, error) {
-	//currentPosts := make([]models.Message, 0)
 
 	tx, err := Thread.dbLauncher.Begin()
 
 	if err != nil {
 		tx.Rollback()
-		//fmt.Println("[DEBUG] TX CREATING ERROR AT CreatePost", err)
 		return nil, err
 	}
 
@@ -43,19 +41,14 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, slug string, id 
 
 	if err != nil {
 		tx.Rollback()
-		//fmt.Println("[DEBUG] ERROR AT SelectThreadInfo", err)
 		return nil, err
 	}
 
 	_, err = tx.Prepare("insert-fu", "INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2) ON CONFLICT (f_slug,u_nickname) DO NOTHING ")
 	stmt, err := tx.Prepare("insert-post", "INSERT INTO messages (date , message , parent , path , u_nickname , f_slug , t_id) VALUES ($1 , $2 , $3 , $7::BIGINT[] , $4 , $5 , $6) RETURNING date , m_id")
-	//_, err = tx.Prepare("get-parent", "SELECT m_id , path FROM messages WHERE t_id = $2 AND m_id = $1")
-	//_, err = tx.Prepare("update-forum", "SELECT m_id , path FROM messages WHERE t_id = $2 AND m_id = $1")
 
-	//fmt.Println(stmt)
 	if err != nil {
 		tx.Rollback()
-		//fmt.Println("[DEBUG] TX PREPARE ERROR AT CreatePost", err)
 		return nil, err
 	}
 
@@ -77,37 +70,12 @@ func (Thread ThreadRepoRealisation) CreatePost(timer time.Time, slug string, id 
 
 		if err != nil {
 			tx.Rollback()
-			//fmt.Println(err)
-			if err.Error() == "ERROR: parent is from different thread (SQLSTATE 00404)" {
+			if err.Error() == "ERROR: Parent post was created in another thread (SQLSTATE 00404)" {
 				return nil, errors.New("Parent post was created in another thread")
 			}
 			return nil, errors.New("no user")
 		}
-
-		//tx.Exec("insert-fu", forumSlug, posts[iter].Author)
-
-		//_ , err  = tx.Exec("INSERT INTO forumUsers (f_slug,u_nickname) VALUES ($1,$2) ON CONFLICT (f_slug,u_nickname) DO NOTHING ", forumSlug, posts[iter].Author)
-		//
-		//if err != nil {
-		//	tx.Rollback()
-		//	fmt.Println("[DEBUG] PREPAREFU CREATING ERROR AT CreatePost", err)
-		//	return nil, err
-		//}
 	}
-
-	//txFU, err := Thread.dbLauncher.Begin()
-	//
-	//if err != nil {
-	//	//fmt.Println("[DEBUG] TXFU CREATING ERROR AT CreatePost", err)
-	//	return nil, err
-	//}
-
-	//if err != nil {
-	//	tx.Rollback()
-	//	//fmt.Println("[DEBUG] PREPAREFU CREATING ERROR AT CreatePost", err)
-	//	return nil, err
-	//}
-	//
 
 	tx.Exec("UPDATE forums SET message_counter = message_counter + $1 WHERE slug = $2", len(posts), forumSlug)
 
@@ -134,7 +102,6 @@ func (Thread ThreadRepoRealisation) SelectThreadInfo(slug string, id int) (int, 
 	err := row.Scan(&threadId, &forumSlug)
 
 	if err != nil {
-		//fmt.Println("[DEBUG] ERROR AT SelectThreadInfo", err)
 		return 0, "", err
 	}
 
@@ -160,7 +127,6 @@ func (Thread ThreadRepoRealisation) GetParent(threadId int, msg []models.Message
 
 	for iter, _ := range msg {
 		if msg[iter].Parent != 0 {
-			//parentPath := make([]uint8, 0)
 			row := tx.QueryRow("SELECT m_id , path FROM messages WHERE t_id = $2 AND m_id = $1 ", msg[iter].Parent, threadId)
 			err = row.Scan(&msg[iter].Parent, &msg[iter].Path)
 
@@ -297,7 +263,6 @@ func (Thread ThreadRepoRealisation) GetPostsSorted(slug string, threadId int, li
 
 	if err != nil {
 		tx.Rollback()
-		//fmt.Println("[DEBUG] TX CREATING ERROR AT CreatePost", err)
 		return nil, err
 	}
 
@@ -396,19 +361,8 @@ func (Thread ThreadRepoRealisation) GetPostsSorted(slug string, threadId int, li
 
 		additionalWhere += " "
 	}
-	//
-	//var explain *string
-	//fmt.Println("SORT:",sortType, selectValues , selectQuery+whereQuery+additionalWhere+orderQuery+limitQuery)
-	//errExplain ,_ := Thread.dbLauncher.Query("EXPLAIN ANALYZE "+selectQuery+whereQuery+additionalWhere+orderQuery+limitQuery, selectValues...)
-	//fmt.Print("[DEBUG EXPLAIN] explain :")
-	//for errExplain.Next() {
-	//	errExplain.Scan(&explain)
-	//	fmt.Println(*explain)
-	//}
-	//errExplain.Close()
 
 	data, err = tx.Query(selectQuery+whereQuery+additionalWhere+orderQuery+limitQuery, selectValues...)
-	//fmt.Println(sortType, selectQuery+whereQuery+additionalWhere+orderQuery+limitQuery)
 
 	if err != nil {
 		tx.Rollback()
@@ -424,7 +378,6 @@ func (Thread ThreadRepoRealisation) GetPostsSorted(slug string, threadId int, li
 
 			if err != nil {
 				tx.Rollback()
-				//fmt.Println(err)
 			}
 
 			messages = append(messages, *msg)
@@ -441,7 +394,6 @@ func (Thread ThreadRepoRealisation) GetPostsSorted(slug string, threadId int, li
 
 		if err = trow.Scan(&threadId, &threadSlug); err != nil {
 			tx.Rollback()
-			//fmt.Println(err)
 			return nil, err
 		}
 	}
@@ -483,9 +435,6 @@ func (Thread ThreadRepoRealisation) UpdateThread(slug string, threadId int, newT
 
 		threadRow.Next()
 		err = threadRow.Scan(&newThread.Id, &newThread.Slug, &newThread.Author, &newThread.Forum, &newThread.Created, &newThread.Message, &newThread.Title, &newThread.Votes)
-		//if err != nil {
-		//	fmt.Println(err)
-		//}
 		threadRow.Close()
 
 		return newThread, err

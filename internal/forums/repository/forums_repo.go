@@ -153,7 +153,21 @@ func (Forum ForumRepoRealisation) CreateThread(thread models.Thread) (models.Thr
 
 func (Forum ForumRepoRealisation) GetThreads(forum models.Forum, limit int, since string, sort bool) ([]models.Thread, error) {
 
-	var err error
+
+	tx, err := Forum.database.Begin()
+
+	if err != nil {
+		return nil , err
+	}
+
+	defer func () {
+		if err == nil {
+			tx.Commit()
+		} else {
+			tx.Rollback()
+		}
+	} ()
+
 	orderStatus := "DESC"
 	sorter := "<"
 
@@ -166,9 +180,11 @@ func (Forum ForumRepoRealisation) GetThreads(forum models.Forum, limit int, sinc
 	selectRow := "SELECT t_id , date , message , title , votes , slug , f_slug , u_nickname FROM threads T "
 	if since != "" {
 		sinceStatus := "WHERE f_slug = $3 AND date" + sorter + "=$2" + " "
-		rowThreads, err = Forum.database.Query(selectRow+sinceStatus+" ORDER BY date "+orderStatus+" LIMIT $1", limit, since, forum.Slug)
+		//tx.Prepare("sort-threads-1",selectRow+sinceStatus+" ORDER BY date "+orderStatus+" LIMIT $1")
+		rowThreads, err = tx.Query(selectRow+sinceStatus+" ORDER BY date "+orderStatus+" LIMIT $1", limit, since, forum.Slug)
 	} else {
-		rowThreads, err = Forum.database.Query(selectRow+"WHERE f_slug = $2 "+"ORDER BY date "+orderStatus+" LIMIT $1", limit, forum.Slug)
+		//tx.Prepare("sort-threads-2",selectRow+"WHERE f_slug = $2 "+"ORDER BY date "+orderStatus+" LIMIT $1")
+		rowThreads, err = tx.Query(selectRow+"WHERE f_slug = $2 "+"ORDER BY date "+orderStatus+" LIMIT $1", limit, forum.Slug)
 	}
 
 	if err != nil {
@@ -190,7 +206,6 @@ func (Forum ForumRepoRealisation) GetThreads(forum models.Forum, limit int, sinc
 			}
 
 			if err != nil {
-				//fmt.Println("[DEBUG] error at method GetThreads (scanning slug of a forum) :", err)
 				return nil, err
 			}
 
@@ -201,7 +216,8 @@ func (Forum ForumRepoRealisation) GetThreads(forum models.Forum, limit int, sinc
 	}
 
 	if len(threads) == 0 {
-		row := Forum.database.QueryRow("SELECT slug FROM forums WHERE slug = $1", forum.Slug)
+		tx.Prepare("get-slug","SELECT slug FROM forums WHERE slug = $1")
+		row := tx.QueryRow("get-slug", forum.Slug)
 		err = row.Scan(&forum.Slug)
 	}
 
@@ -242,15 +258,6 @@ func (Forum ForumRepoRealisation) GetForumUsers(slug string, limit int, since st
 		}
 	}
 
-	//var explain *string
-	//fmt.Println(selectRow, selectValues)
-	//errExplain ,_ := Forum.database.Query("EXPLAIN ANALYZE "+selectRow, selectValues...)
-	//fmt.Print("[DEBUG EXPLAIN] explain :")
-	//for errExplain.Next() {
-	//	errExplain.Scan(&explain)
-	//	fmt.Println(*explain)
-	//}
-	//errExplain.Close()
 	row, err = Forum.database.Query(selectRow, selectValues...)
 
 	if err != nil {

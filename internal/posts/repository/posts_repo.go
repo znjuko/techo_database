@@ -20,14 +20,16 @@ func (PostRepo PostRepoRealisation) GetPost(id int, flags []string) (models.AllP
 	tx, err := PostRepo.dbLauncher.Begin()
 
 	if err != nil {
+		tx.Rollback()
 		return models.AllPostData{}, err
 	}
 
 	var row *pgx.Row
+	tx.Prepare("get-msg","SELECT m_id , date , message , edit , parent , t_id , u_nickname , f_slug FROM messages WHERE m_id = $1")
 	if len(flags) == 0 {
-		row = PostRepo.dbLauncher.QueryRow("SELECT m_id , date , message , edit , parent , t_id , u_nickname , f_slug FROM messages WHERE m_id = $1", id)
+		row = tx.QueryRow("get-msg", id)
 	} else {
-		row = tx.QueryRow("SELECT m_id , date , message , edit , parent , t_id , u_nickname , f_slug FROM messages WHERE m_id = $1", id)
+		row = tx.QueryRow("get-msg", id)
 	}
 	err = row.Scan(&msg.Id, &msg.Created, &msg.Message, &msg.IsEdited, &msg.Parent, &msg.Thread, &msg.Author, &msg.Forum)
 
@@ -56,10 +58,6 @@ func (PostRepo PostRepoRealisation) GetPost(id int, flags []string) (models.AllP
 
 			err = row.Scan(&forum.Slug, &forum.Title, &forum.User, &forum.Posts, &forum.Threads)
 
-			//if err != nil {
-			//	fmt.Println(err, "can't find a forum")
-			//}
-
 			answer.Forum = forum
 
 		case "thread":
@@ -71,10 +69,6 @@ func (PostRepo PostRepoRealisation) GetPost(id int, flags []string) (models.AllP
 			if threadSlug != nil {
 				thread.Slug = *threadSlug
 			}
-
-			//if err != nil {
-			//	fmt.Println(err, "can't find a thread")
-			//}
 
 			answer.Thread = thread
 		}

@@ -97,16 +97,6 @@ CREATE UNIQUE INDEX idx_forumusers_slug_nick ON forumUsers (f_slug, u_nickname);
 CLUSTER forumUsers USING idx_forumusers_slug_nick;
 CREATE INDEX idx_forumusers_nick ON forumUsers (u_nickname);
 
-
--- CREATE OR REPLACE FUNCTION updater()
---     RETURNS TRIGGER AS
--- $BODY$
--- BEGIN
---     UPDATE messages SET path = path || NEW.m_id WHERE t_id = NEW.t_id AND m_id = NEW.m_id;
---     RETURN NEW;
--- END;
--- $BODY$ LANGUAGE plpgsql;
-
 CREATE OR REPLACE FUNCTION updater()
     RETURNS TRIGGER AS
 $BODY$
@@ -119,7 +109,7 @@ BEGIN
     ELSE
         SELECT t_id , path FROM messages WHERE t_id = NEW.t_id AND m_id = NEW.parent INTO first_parent_thread , parent_path;
         IF NOT FOUND OR first_parent_thread != NEW.t_id THEN
-            RAISE EXCEPTION 'parent is from different thread' USING ERRCODE = '00404';
+            RAISE EXCEPTION 'Parent post was created in another thread' USING ERRCODE = '00404';
         END IF;
 
         NEW.path := parent_path || NEW.m_id;
@@ -134,20 +124,4 @@ CREATE TRIGGER u_updater
     FOR EACH ROW
 EXECUTE PROCEDURE updater();
 
-
---
--- CREATE OR REPLACE FUNCTION fupdater()
---     RETURNS TRIGGER AS
--- $BODY$
--- BEGIN
---     INSERT INTO forumUsers (f_slug, u_nickname) VALUES (NEW.f_slug, NEW.u_nickname) ON CONFLICT DO NOTHING;
---     RETURN NEW;
--- END;
--- $BODY$ LANGUAGE plpgsql;
---
--- CREATE TRIGGER fu_updater
---     AFTER INSERT
---     ON messages
---     FOR EACH ROW
--- EXECUTE PROCEDURE fupdater();
 

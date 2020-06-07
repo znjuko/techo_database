@@ -1,8 +1,15 @@
 ALTER SYSTEM SET checkpoint_completion_target = '0.9';
 ALTER SYSTEM SET wal_buffers = '6912kB';
 ALTER SYSTEM SET default_statistics_target = '100';
-ALTER SYSTEM SET random_page_cost = '1.1';
+ALTER SYSTEM SET random_page_cost = '1';
 ALTER SYSTEM SET effective_io_concurrency = '200';
+ALTER SYSTEM SET seq_page_cost = '0.1';
+ALTER SYSTEM SET random_page_cost = '0.1';
+
+ALTER SYSTEM SET max_worker_processes = '4';
+ALTER SYSTEM SET max_parallel_workers_per_gather = '2';
+ALTER SYSTEM SET max_parallel_workers = '4';
+ALTER SYSTEM SET max_parallel_maintenance_workers = '2';
 
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS forums CASCADE;
@@ -29,7 +36,6 @@ CREATE UNLOGGED TABLE users
 
 CREATE INDEX idx_users_nickname ON users (email);
 CREATE INDEX idx_users_all ON users (nickname, fullname, email, about);
-CREATE INDEX idx_users_all ON users (u_id,nickname, fullname, email, about);
 CLUSTER users USING idx_users_all;
 
 CREATE UNLOGGED TABLE forums
@@ -67,7 +73,6 @@ CREATE INDEX idx_threads_slug ON threads (slug);
 CREATE INDEX idx_threads_slughash ON threads USING hash (slug);
 CREATE INDEX idx_threads_tidhash ON threads USING hash (t_id);
 CREATE INDEX idx_threads_all ON threads (t_id, date, message, title, votes, slug, f_slug, u_nickname);
-CREATE INDEX idx_threads_all_reversed ON threads (t_id , slug , u_nickname , f_slug , date , message , title , votes);
 
 
 CREATE UNLOGGED TABLE voteThreads
